@@ -22,9 +22,9 @@ export class MediaLibraryPage extends BasePage {
     fileDropArea:     () => this.findElement({ get: "dex-media-list#dexMediaList", find: ["dex-file-drop"] }),
     media:            (name: string) => this.page.locator("dex-media-card[slot='card']").filter({ hasText: name }),
     closeBtn:         () => this.page.locator("paper-icon-button[title]").first(),
-    mediaFormat:      () => this.page.locator("#dexMediaDetailPreview >> paper-icon-item.item-hover").filter({ hasText: /formato|format/i }).locator('span'),
-    mediaDimension:   () => this.page.locator("#dexMediaDetailPreview >> paper-icon-item.item-hover").filter({ hasText: /dimensiones|dimensions/i }).locator('span'),
-    mediaSize:        () => this.page.locator("#dexMediaDetailPreview >> paper-icon-item.item-hover").filter({ hasText: /tamaño|size/i }).locator('span'),
+    mediaFormat:      () => this.page.locator("#dexMediaDetailPreview >> paper-icon-item.item-hover").filter({ hasText: /formato|format/i }).locator('span').filter({ hasNotText: /formato|format/i }),
+    mediaDimension:   () => this.page.locator("#dexMediaDetailPreview >> paper-icon-item.item-hover").filter({ hasText: /dimensiones|dimensions/i }).locator('span').filter({ hasNotText: /dimensiones|dimensions/i }),
+    mediaSize:        () => this.page.locator("#dexMediaDetailPreview >> paper-icon-item.item-hover").filter({ hasText: /tamaño|size/i }).locator('span').filter({ hasNotText: /tamaño|size/i }),
   };
 
   async typeSearchMediaInput2(ruta: string) {
@@ -89,10 +89,19 @@ export class MediaLibraryPage extends BasePage {
   // Simulates drag-and-drop file upload to the drop zone.
   // Files must be placed in the fixtures/ folder of the project.
   async dropFile(fileName: string) {
-    // Capture card count BEFORE drop so clickOnMedia can detect the new card
-    this._cardCountBeforeDrop = await this.page.evaluate(() =>
-      document.querySelectorAll('dex-media-card[slot="card"]').length
-    );
+    // Capture card count BEFORE drop piercing shadow DOM, same traversal used in clickOnMedia
+    this._cardCountBeforeDrop = await this.page.evaluate(() => {
+      function findAllCards(root: Document | ShadowRoot): HTMLElement[] {
+        const results: HTMLElement[] = [];
+        results.push(...Array.from(root.querySelectorAll('dex-media-card[slot="card"]')) as HTMLElement[]);
+        for (const el of Array.from(root.querySelectorAll('*'))) {
+          const sr = (el as Element & { shadowRoot?: ShadowRoot }).shadowRoot;
+          if (sr) results.push(...findAllCards(sr));
+        }
+        return results;
+      }
+      return findAllCards(document).length;
+    });
 
     const fixturePath = path.join(__dirname, '../fixtures', fileName);
     const fileContent = fs.readFileSync(fixturePath);

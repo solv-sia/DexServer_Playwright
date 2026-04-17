@@ -50,11 +50,8 @@ export class PlaylistPage extends BasePage {
   }
 
   async typeNamePlaylistInput(name: string) {
-    const input = this.page.locator('.flex.input-name >> input').filter({
-      has: this.page.locator('[placeholder]'),
-    });
-    await input.click();
-    await input.fill(name, { force: true });
+    await this.elements.namePlaylistInput().click();
+    await this.elements.namePlaylistInput().fill(name, { force: true });
   }
 
   async typeFromHourInput(from: string) {
@@ -99,13 +96,56 @@ export class PlaylistPage extends BasePage {
     if (!ruta) return;
     const subfolders = ruta.split('/');
     for (const folder of subfolders) {
-      await this.page.locator(`div[title='${folder}']`).first().click({ force: true });
-      await this.page.waitForTimeout(300);
+      await this.page.waitForFunction((title: string) => {
+        function findInShadow(root: Document | ShadowRoot, sel: string): Element | null {
+          const found = root.querySelector(sel);
+          if (found) return found;
+          for (const el of root.querySelectorAll('*')) {
+            const sr = (el as Element & { shadowRoot?: ShadowRoot }).shadowRoot;
+            if (sr) { const r = findInShadow(sr, sel); if (r) return r; }
+          }
+          return null;
+        }
+        return !!findInShadow(document, `div[title='${title}']`);
+      }, folder, { timeout: 10000 });
+
+      await this.page.evaluate((title: string) => {
+        function findInShadow(root: Document | ShadowRoot, sel: string): HTMLElement | null {
+          const found = root.querySelector(sel) as HTMLElement | null;
+          if (found) return found;
+          for (const el of root.querySelectorAll('*')) {
+            const sr = (el as Element & { shadowRoot?: ShadowRoot }).shadowRoot;
+            if (sr) { const r = findInShadow(sr, sel); if (r) return r; }
+          }
+          return null;
+        }
+        const el = findInShadow(document, `div[title='${title}']`);
+        if (el) {
+          el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+          el.dispatchEvent(new MouseEvent('mouseup',   { bubbles: true, cancelable: true }));
+          el.dispatchEvent(new MouseEvent('click',     { bubbles: true, cancelable: true }));
+        }
+      }, folder);
+
+      await this.page.waitForTimeout(600);
     }
   }
 
   // Drag-and-drop using Polymer's internal __data.media to dispatch a drop event on the channel.
   async moveMediaToChannel(channel: number, mediaName: string) {
+    await this.page.waitForFunction((name: string) => {
+      function findInShadow(root: Document | ShadowRoot, sel: string): Element | null {
+        const found = root.querySelector(sel);
+        if (found) return found;
+        for (const el of root.querySelectorAll('*')) {
+          const sr = (el as Element & { shadowRoot?: ShadowRoot }).shadowRoot;
+          if (sr) { const r = findInShadow(sr, sel); if (r) return r; }
+        }
+        return null;
+      }
+      return !!findInShadow(document, `[title="${name}"]`);
+    }, mediaName, { timeout: 15000 });
+
     await this.page.evaluate(({ channel, mediaName }: { channel: number; mediaName: string }) => {
       function findInShadow(root: Document | ShadowRoot, selector: string): Element | null {
         const found = root.querySelector(selector);
@@ -128,8 +168,18 @@ export class PlaylistPage extends BasePage {
       }
       if (!mediaObj) throw new Error(`No __data.media found for: ${mediaName}`);
 
-      const channels = document.querySelectorAll('.horizontal.layout.flex.media-container');
-      const dest = channels[channel - 1] as HTMLElement;
+      function findAllInShadow(root: Document | ShadowRoot, selector: string): HTMLElement[] {
+        const results: HTMLElement[] = [];
+        results.push(...Array.from(root.querySelectorAll(selector)) as HTMLElement[]);
+        for (const el of root.querySelectorAll('*')) {
+          const sr = (el as Element & { shadowRoot?: ShadowRoot }).shadowRoot;
+          if (sr) results.push(...findAllInShadow(sr, selector));
+        }
+        return results;
+      }
+
+      const channels = findAllInShadow(document, '.horizontal.layout.flex.media-container');
+      const dest = channels[channel - 1];
       if (!dest) throw new Error(`Channel ${channel} not found`);
 
       const dataTransfer = new DataTransfer();
