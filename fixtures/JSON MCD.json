@@ -1,0 +1,211 @@
+{
+	"mediaName": "AR_MOS_V_TASTY",
+	"version": "2.51.2104.2000",
+	"necessarySkus": [
+		
+	],
+	"duration": 9,
+	"debugTags": false,
+	"debugNotAvailables": false,
+	"debugShowSkus": false,
+	"tags": [
+		{
+			"SKU": "",
+			"debugPrice": 900.9,
+			"timelines": [
+				{
+					"position": {
+						"x": -154.5,
+						"y": -368,
+						"h": 77
+					},
+					"duration": 1000000,
+					"rotation": 0,
+					"timePosition": 0,
+					"fontSize": 65.0580368041992,
+					"color": "#000000",
+					"fade": true,
+					"font": "SpeedeeCondensed-Bold",
+					"centered": true,
+					"prefix": {
+						"char": "$",
+						"fontSize": 15.0133895874023,
+						"font": "SpeedeeCondensed-Bold",
+						"color": "#000000",
+						"position": {
+							"x": -107,
+							"y": -394,
+							"h": 18
+						}
+					}
+				}
+			]
+		},
+		{
+			"SKU": "26934",
+			"debugPrice": 900.9,
+			"timelines": [
+				{
+					"position": {
+						"x": -814.5,
+						"y": -276,
+						"h": 76
+					},
+					"duration": 1000000,
+					"rotation": 0,
+					"timePosition": 0,
+					"fontSize": 65,
+					"color": "#000000",
+					"fade": true,
+					"font": "SpeedeeCondensed-Bold",
+					"centered": true,
+					"prefix": {
+						"char": "$",
+						"fontSize": 15,
+						"font": "SpeedeeCondensed-Bold",
+						"color": "#000000",
+						"position": {
+							"x": -767,
+							"y": -302,
+							"h": 17
+						}
+					}
+				}
+			]
+		},
+		{
+			"SKU": "26892",
+			"debugPrice": 900.9,
+			"timelines": [
+				{
+					"position": {
+						"x": -136.5,
+						"y": -1318,
+						"h": 77
+					},
+					"duration": 1000000,
+					"rotation": 0,
+					"timePosition": 0,
+					"fontSize": 65.0580368041992,
+					"color": "#000000",
+					"fade": true,
+					"font": "SpeedeeCondensed-Bold",
+					"centered": true,
+					"prefix": {
+						"char": "$",
+						"fontSize": 15.0133895874023,
+						"font": "SpeedeeCondensed-Bold",
+						"color": "#000000",
+						"position": {
+							"x": -89,
+							"y": -1344,
+							"h": 18
+						}
+					}
+				}
+			]
+		},
+		{
+			"SKU": "26893",
+			"debugPrice": 900.9,
+			"timelines": [
+				{
+					"position": {
+						"x": -786.5,
+						"y": -1217,
+						"h": 77
+					},
+					"duration": 1000000,
+					"rotation": 0,
+					"timePosition": 0,
+					"fontSize": 65.0580368041992,
+					"color": "#000000",
+					"fade": true,
+					"font": "SpeedeeCondensed-Bold",
+					"centered": true,
+					"prefix": {
+						"char": "$",
+						"fontSize": 15.0133895874023,
+						"font": "SpeedeeCondensed-Bold",
+						"color": "#000000",
+						"position": {
+							"x": -739,
+							"y": -1243,
+							"h": 18
+						}
+					}
+				}
+			]
+		}
+	],
+	"notAvailables": [
+		{
+			"SKU": "26933",
+			"timelines": [
+				{
+					"position": {
+						"x": -82,
+						"y": -331
+					},
+					"duration": 1000000,
+					"timePosition": 0,
+					"width": 147,
+					"scale": 20,
+					"src": "images/Globo_AR.png",
+					"fade": true
+				}
+			]
+		},
+		{
+			"SKU": "26934",
+			"timelines": [
+				{
+					"position": {
+						"x": -741,
+						"y": -234
+					},
+					"duration": 1000000,
+					"timePosition": 0,
+					"width": 147,
+					"scale": 20,
+					"src": "images/Globo_AR.png",
+					"fade": true
+				}
+			]
+		},
+		{
+			"SKU": "26892",
+			"timelines": [
+				{
+					"position": {
+						"x": -64,
+						"y": -1280
+					},
+					"duration": 1000000,
+					"timePosition": 0,
+					"width": 147,
+					"scale": 20,
+					"src": "images/Globo_AR.png",
+					"fade": true
+				}
+			]
+		},
+		{
+			"SKU": "26893",
+			"timelines": [
+				{
+					"position": {
+						"x": -711,
+						"y": -1183
+					},
+					"duration": 1000000,
+					"timePosition": 0,
+					"width": 147,
+					"scale": 20,
+					"src": "images/Globo_AR.png",
+					"fade": true
+				}
+			]
+		}
+	]
+}

@@ -1,0 +1,7 @@
+node_modules/
+dist/
+auth/
+.shared-data.json
+screenshots/
+test-results/
+playwright-report/
