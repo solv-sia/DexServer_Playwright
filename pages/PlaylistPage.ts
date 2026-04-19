@@ -16,7 +16,7 @@ export class PlaylistPage extends BasePage {
     saveButton:          () => this.page.locator("[icon='save']"),
     searchMediaInput:    () => this.page.locator('#dexPlaylistDetail >> #dexComponentSelector >> input[placeholder]').filter({ hasText: '' }),
     channels:            () => this.page.locator('.horizontal.layout.flex.media-container'),
-    condicionalTab:      () => this.page.locator("[data-name='conditional']").nth(0),
+    condicionalTab:      () => this.page.getByRole('tab', { name: 'Condicional' }).first(),
     mediaInChannel:      (channel: number, name: string) =>
       this.page.locator('.horizontal.layout.flex.media-container').nth(channel - 1).locator(`div[title='${name}']`),
     mediaInChannelPos:   (cp: string) => this.page.locator(`div[data-id='${cp}']`),
@@ -38,7 +38,7 @@ export class PlaylistPage extends BasePage {
   async clickResultingLayout() { await this.elements.resultingLayout().click(); }
   async clickConfirmButton() { await this.elements.confirmButton().click({ force: true }); }
   async clickSaveButton() { await this.elements.saveButton().click(); }
-  async clickCondicionalTab() { await this.elements.condicionalTab().click({ force: true }); }
+  async clickCondicionalTab() { await this.elements.condicionalTab().click(); }
   async clickEveryDaysCheckbox() { await this.elements.everyDaysCheckbox().click(); }
   async clickFromDateInput() { await this.elements.fromDateInput().click(); }
   async clickToDateInput() { await this.elements.toDateInput().click(); }

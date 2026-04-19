@@ -14,6 +14,7 @@ export default defineConfig({
 
   use: {
     baseURL: process.env.BASE_URL_DEX,
+    actionTimeout: 15000,
     viewport: null, // null = uses the actual browser window size
     launchOptions: {
       args: ['--start-maximized'],

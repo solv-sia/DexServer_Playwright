@@ -11,7 +11,7 @@ test.use({ storageState: path.join(__dirname, '../auth/storageState.json') });
 
 test.describe('Crear una PL Multiframe con elementos condicionados', () => {
   test('@CP10PP', async ({ page }) => {
-    test.setTimeout(120000);
+    test.setTimeout(60000);
     const fechaFormateada = dateFormatter.datetime();
     const playlistName = 'Playlist creada con Playwright <3 ' + fechaFormateada;
 
