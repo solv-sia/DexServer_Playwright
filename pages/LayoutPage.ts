@@ -22,6 +22,22 @@ export class LayoutPage extends BasePage {
     await this.elements.addButton().click();
   }
 
+  async searchLayout(name: string) {
+    const input = this.page.locator('paper-input.search-input input, input[placeholder]').first();
+    await input.fill(name, { force: true });
+    await input.press('Enter');
+    await this.page.waitForTimeout(500);
+  }
+
+  async deleteLayout(name: string) {
+    await this.searchLayout(name);
+    await this.page.locator('.vertical.layout.center.layout-card').first().click();
+    await this.page.waitForTimeout(300);
+    await this.page.locator('paper-icon-button[icon="delete"]').first().click({ force: true });
+    await this.page.locator('paper-button[role="button"]').filter({ hasText: /Aceptar|Accept|Confirmar|Confirm/i }).first().click();
+    await this.page.waitForTimeout(500);
+  }
+
   async clickSaveButton() {
     await this.elements.saveButton().click();
   }

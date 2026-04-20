@@ -9,16 +9,26 @@ export class GlobalPage extends BasePage {
   private elements = {
     comboTenant:   () => this.findElement({ get: '#customerDropdown', find: ['input'] }),
     passwordInput: () => this.findElement({ get: '#password', find: ['input[type=\'password\']'] }),
-    spinner:       () => this.page.locator('#main'),
+    spinner:       () => this.page.locator('#dexloader #main'),
     accountMenu:   () => this.page.locator('.header-profile-picture'),
     logout:        () => this.page.locator('.flex.account-menu-item').nth(2),
     menuSetting:   () => this.page.locator('[data-name=\'setting\']'),
     optionCustomer: () => this.page.locator('[href=\'#!/settings/customer\']'),
     optionRole:    () => this.page.locator('[href=\'#!/settings/role\']'),
     optionUser:    () => this.page.locator('[href=\'#!/settings/user\']'),
+    optionGeneral: () => this.page.locator('[href=\'#!/settings/server-settings\']'),
+    optionTag:     () => this.page.locator('[href=\'#!/settings/tag\']'),
     infoToastLabel:       () => this.findElement({ get: '#infoToast', find: ['#label'] }),
     playlistIcon:         () => this.findElement({ get: '.playlist-color', find: ['#icon'] }),
-    mediaLibraryHeader:   () => this.findElement({ get: 'dex-app', find: ["[name='master']", '#dexHeader', ".media-color[icon='perm-media']"], eq: 0 }),
+    scheduleIcon:         () => this.findElement({ get: '.schedules-color', find: ['#icon'] }),
+    networkIcon:              () => this.findElement({ get: '.network-color', find: ['#icon'] }),
+    hardwarePolicyHeader:     () => this.findElement({ get: 'dex-app', find: ["[name='master']", '#dexHeader', ".network-color[icon='settings-remote']"] }),
+    transmissionPolicyHeader: () => this.findElement({ get: 'dex-app', find: ["[name='master']", '#dexHeader', ".network-color[icon='settings-input-antenna']"] }),
+    mediaLibraryHeader:       () => this.findElement({ get: 'dex-app', find: ["[name='master']", '#dexHeader', ".media-color[icon='perm-media']"], eq: 0 }),
+    playlistHeader:           () => this.findElement({ get: 'dex-app', find: ["[name='master']", '#dexHeader', ".playlist-color[icon='theaters']"], eq: 0 }),
+    optionReport:             () => this.page.locator("[data-name='report']"),
+    optionPOP:                () => this.page.locator("a[href='#!/report/daily-impressions'"),
+    optionDexStore:           () => this.page.locator("[href='#!/store']"),
   };
 
   async waitSpinner() {
@@ -71,9 +81,20 @@ export class GlobalPage extends BasePage {
     }
   }
 
-  async clickPlaylist() {
-    await this.elements.playlistIcon().click();
-  }
+  async clickPlaylist()                   { await this.elements.playlistIcon().click(); }
+  async clickOnPlaylistHeader()           { await this.elements.playlistHeader().click(); }
+  async clickSchedule()                   { await this.elements.scheduleIcon().click(); }
+  async clickNetwork()                    { await this.elements.networkIcon().click(); }
+  async clickOnNetworkHeader()            { await this.elements.networkIcon().click(); }
+  async clickOnHardwarePolicyHeader()     { await this.elements.hardwarePolicyHeader().click(); }
+  async clickOnTransmissionPolicyHeader() { await this.elements.transmissionPolicyHeader().click(); }
+  async clickOptionGeneral()              { await this.elements.optionGeneral().click(); }
+  async clickOptionTag()                  { await this.elements.optionTag().click(); }
+  async clickButtonReport()               { await this.elements.optionReport().click(); }
+  async clickOptionPOP()                  { await this.elements.optionPOP().click(); }
+  async clickOptionDexStore()             { await this.elements.optionDexStore().click(); }
+
+
 
   async clickOnMediaLibraryHeader() {
     await this.elements.mediaLibraryHeader().click();

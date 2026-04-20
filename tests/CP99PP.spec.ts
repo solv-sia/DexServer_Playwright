@@ -1,0 +1,220 @@
+// Limpieza general: eliminar todos los elementos creados durante la suite
+import { test } from '@playwright/test';
+import * as path from 'path';
+import config from '../utils/config';
+import { getSharedData } from '../utils/sharedData';
+import { GlobalPage } from '../pages/GlobalPage';
+import { NetworkPage } from '../pages/NetworkPage';
+import { HardwarePolicyPage } from '../pages/HardwarePolicyPage';
+import { TransmissionPolicyPage } from '../pages/TransmissionPolicyPage';
+import { SchedulePage } from '../pages/SchedulePage';
+import { PlaylistPage } from '../pages/PlaylistPage';
+import { LayoutPage } from '../pages/LayoutPage';
+import { MediaLibraryPage } from '../pages/MediaLibraryPage';
+import { UserPage } from '../pages/UserPage';
+import { RolePage } from '../pages/RolePage';
+import { CustomerPage } from '../pages/CustomerPage';
+import { DashboardPage } from '../pages/DashboardPage';
+
+test.use({ storageState: path.join(__dirname, '../auth/storageState.json') });
+
+async function loginSetup(page: import('@playwright/test').Page) {
+  const globalPage = new GlobalPage(page);
+  await page.goto(`${config.baseUrl}/DexFrontEnd/`, { waitUntil: 'domcontentloaded' });
+  await globalPage.waitSpinner();
+  await globalPage.switchToNewTenant(config.clientName);
+  await globalPage.loginDecision(config.password);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await globalPage.waitSpinner();
+  return globalPage;
+}
+
+test.describe('Limpieza suite: eliminar elementos creados', () => {
+
+  test('@CP99APP Eliminar medias de la biblioteca', async ({ page }) => {
+    test.setTimeout(120000);
+    const globalPage = await loginSetup(page);
+    const mediaLibraryPage = new MediaLibraryPage(page);
+
+    await globalPage.clickOnMediaLibraryHeader();
+    await mediaLibraryPage.typeSearchMediaInput2(config.fileUploadPath);
+    await mediaLibraryPage.findBottomFolder(config.fileUploadPath);
+
+    await page.locator(`div[title='${config.uploadFolderName}']`).first().click();
+    await page.waitForTimeout(500);
+
+    for (const file of [config.fileToDelete1, config.fileToDelete2, config.fileToDelete3, config.fileToDelete4]) {
+      try {
+        await mediaLibraryPage.deleteMediaFromLibrary(file);
+      } catch {
+        // file may not exist
+      }
+    }
+
+    await page.screenshot({ path: 'screenshots/cp99app.png' });
+  });
+
+  test('@CP99BPP Eliminar grupos de red (sincronizado y solitario)', async ({ page }) => {
+    test.setTimeout(90000);
+    const globalPage = await loginSetup(page);
+    const networkPage = new NetworkPage(page);
+
+    await globalPage.clickNetwork();
+    await globalPage.waitSpinner();
+
+    const syncGroup = getSharedData('groupCP20PP');
+    if (syncGroup) {
+      try { await networkPage.deleteGroup(syncGroup); } catch { /* group may not exist */ }
+    }
+
+    await page.waitForTimeout(1000);
+
+    const lonelyGroup = getSharedData('groupCP16PP');
+    if (lonelyGroup) {
+      try { await networkPage.deleteGroup(lonelyGroup); } catch { /* group may not exist */ }
+    }
+
+    await page.screenshot({ path: 'screenshots/cp99bpp.png' });
+  });
+
+  test('@CP99CPP Eliminar política de hardware', async ({ page }) => {
+    test.setTimeout(60000);
+    const globalPage = await loginSetup(page);
+    const hwPolicyPage = new HardwarePolicyPage(page);
+
+    await globalPage.clickOnNetworkHeader();
+    await globalPage.waitSpinner();
+    await globalPage.clickOnHardwarePolicyHeader();
+
+    const hwPolicy = getSharedData('policyCP29PP');
+    if (hwPolicy) {
+      try { await hwPolicyPage.deletePolicy(hwPolicy); } catch { /* may not exist */ }
+    }
+
+    await page.screenshot({ path: 'screenshots/cp99cpp.png' });
+  });
+
+  test('@CP99DPP Eliminar política de transmisión', async ({ page }) => {
+    test.setTimeout(60000);
+    const globalPage = await loginSetup(page);
+    const trPolicyPage = new TransmissionPolicyPage(page);
+
+    await globalPage.clickOnNetworkHeader();
+    await globalPage.waitSpinner();
+    await globalPage.clickOnTransmissionPolicyHeader();
+
+    const trPolicy = getSharedData('policyCP30PP');
+    if (trPolicy) {
+      try { await trPolicyPage.deletePolicy(trPolicy); } catch { /* may not exist */ }
+    }
+
+    await page.screenshot({ path: 'screenshots/cp99dpp.png' });
+  });
+
+  test('@CP99EPP Eliminar calendario', async ({ page }) => {
+    test.setTimeout(60000);
+    const globalPage = await loginSetup(page);
+    const schedulePage = new SchedulePage(page);
+
+    await globalPage.clickSchedule();
+    await globalPage.waitSpinner();
+
+    const schedule = getSharedData('ScheudleCP13PP');
+    if (schedule) {
+      try { await schedulePage.deleteSchedule(schedule); } catch { /* may not exist */ }
+    }
+
+    await page.screenshot({ path: 'screenshots/cp99epp.png' });
+  });
+
+  test('@CP99FPP Eliminar playlists', async ({ page }) => {
+    test.setTimeout(90000);
+    const globalPage = await loginSetup(page);
+    const playlistPage = new PlaylistPage(page);
+
+    await globalPage.clickPlaylist();
+    await globalPage.waitSpinner();
+
+    const playlist = getSharedData('PlaylistCP10PP');
+    if (playlist) {
+      try { await playlistPage.deletePlaylist(playlist); } catch { /* may not exist */ }
+    }
+
+    for (const plName of [config.calendarPL, config.PL_CP34PP]) {
+      try { await playlistPage.deletePlaylist(plName); } catch { /* may not exist */ }
+    }
+
+    await page.screenshot({ path: 'screenshots/cp99fpp.png' });
+  });
+
+  test('@CP99GPP Eliminar layout', async ({ page }) => {
+    test.setTimeout(60000);
+    const globalPage = await loginSetup(page);
+    const dashboardPage = new DashboardPage(page);
+    const layoutPage = new LayoutPage(page);
+
+    await dashboardPage.clickMenuPlaylist();
+    await dashboardPage.clickOptionLayout();
+    await globalPage.waitSpinner();
+
+    const layout = getSharedData('layoutCP09PP');
+    if (layout) {
+      try { await layoutPage.deleteLayout(layout); } catch { /* may not exist */ }
+    }
+
+    await page.screenshot({ path: 'screenshots/cp99gpp.png' });
+  });
+
+  test('@CP99HPP Eliminar usuarios', async ({ page }) => {
+    test.setTimeout(60000);
+    const globalPage = await loginSetup(page);
+    const userPage = new UserPage(page);
+
+    await globalPage.clickMenuSetting();
+    await globalPage.clickOptionUsers();
+    await globalPage.waitSpinner();
+
+    for (const key of ['userCP05PP', 'userCP06PP']) {
+      const username = getSharedData(key);
+      if (username) {
+        try { await userPage.deleteUser(username); } catch { /* may not exist */ }
+      }
+    }
+
+    await page.screenshot({ path: 'screenshots/cp99hpp.png' });
+  });
+
+  test('@CP99IPP Eliminar rol', async ({ page }) => {
+    test.setTimeout(60000);
+    const globalPage = await loginSetup(page);
+    const rolePage = new RolePage(page);
+
+    await globalPage.clickMenuSetting();
+    await globalPage.clickOptionRole();
+    await globalPage.waitSpinner();
+
+    const role = getSharedData('roleCP04PP');
+    if (role) {
+      try { await rolePage.deleteRole(role); } catch { /* may not exist */ }
+    }
+
+    await page.screenshot({ path: 'screenshots/cp99ipp.png' });
+  });
+
+  test('@CP99JPP Eliminar cliente', async ({ page }) => {
+    test.setTimeout(60000);
+    const globalPage = await loginSetup(page);
+    const customerPage = new CustomerPage(page);
+
+    await globalPage.clickMenuSetting();
+    await globalPage.clickOptionCustomer();
+    await globalPage.waitSpinner();
+
+    const customer = getSharedData('customerCP02PP');
+    if (customer) {
+      try { await customerPage.deleteCustomer(customer); } catch { /* may not exist */ }
+    }
+
+    await page.screenshot({ path: 'screenshots/cp99jpp.png' });
+  });
+});

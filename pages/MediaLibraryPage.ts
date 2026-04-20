@@ -212,6 +212,245 @@ export class MediaLibraryPage extends BasePage {
     await expect(this.elements.mediaSize()).toContainText(expectedSize);
   }
 
+  async typeSizeInput(size: string) {
+    const input = this.page.locator("vaadin-text-field[part='text-field'] input[part='value']").nth(0);
+    await input.fill(size, { force: true });
+    await input.press('ArrowDown');
+    await input.press('Enter');
+  }
+
+  async typeDurationHourInput(hour: string) {
+    const input = this.page.locator("paper-input#hour input[name='hour']");
+    await input.fill(hour, { force: true });
+  }
+
+  async typeDurationMinuteInput(minute: string) {
+    const input = this.page.locator("paper-input#min input[name='min']");
+    await input.fill(minute, { force: true });
+  }
+
+  async typeDurationSecondInput(second: string) {
+    const input = this.page.locator("paper-input#sec input[name='sec']");
+    await input.fill(second, { force: true });
+  }
+
+  async removeAllTagsFromInput(containerLocator: ReturnType<typeof this.page.locator>) {
+    const closeBtns = containerLocator.locator("paper-icon-button[icon='icons:close']");
+    while (await closeBtns.count() > 0) {
+      await closeBtns.first().click({ force: true });
+      await this.page.waitForTimeout(100);
+    }
+  }
+
+  async clearInclusionTags() {
+    await this.removeAllTagsFromInput(this.page.locator("dex-textarea-tags#inclusionInput"));
+  }
+
+  async clearExclusionTags() {
+    await this.removeAllTagsFromInput(this.page.locator("dex-textarea-tags#exclusionInput"));
+  }
+
+  async clearProductTags() {
+    await this.removeAllTagsFromInput(this.page.locator("dex-product-combo"));
+  }
+
+  async clickBtnClearFromDateInput() {
+    const container = this.page.locator("dex-date-picker.input-datepicker").nth(0);
+    const clearIcon = container.locator("iron-icon[icon='cancel']");
+    if (await clearIcon.count() > 0) await clearIcon.click({ force: true });
+  }
+
+  async clickBtnClearToDateInput() {
+    const container = this.page.locator("dex-date-picker.input-datepicker").nth(1);
+    const clearIcon = container.locator("iron-icon[icon='cancel']");
+    if (await clearIcon.count() > 0) await clearIcon.click({ force: true });
+  }
+
+  async clearFromHourInput() {
+    const input = this.page.locator("paper-input.flex.input").nth(0).locator("input[autocomplete='off']");
+    await input.fill('', { force: true });
+  }
+
+  async clearToHourInput() {
+    const input = this.page.locator("paper-input.flex.input").nth(1).locator("input[autocomplete='off']");
+    await input.fill('', { force: true });
+  }
+
+  async clearFromHourRecurenceInput() {
+    const input = this.page.locator("paper-input.flex.input").nth(2).locator("input[autocomplete='off']");
+    await input.fill('', { force: true });
+  }
+
+  async clearToHourRecurenceInput() {
+    const input = this.page.locator("paper-input.flex.input").nth(3).locator("input[autocomplete='off']");
+    await input.fill('', { force: true });
+  }
+
+  async setEveryDaysCheckboxState(desiredState: boolean) {
+    const checkbox = this.page.locator('.flex.day-checkbox').first();
+    const isChecked = await checkbox.evaluate((el) => el.getAttribute('aria-checked') === 'true');
+    if (isChecked !== desiredState) await checkbox.click({ force: true });
+  }
+
+  async setPOPCheckboxState(desiredState: boolean) {
+    const checkbox = this.page.locator('.media-detail-list-data.paper-material').nth(0).locator('paper-checkbox');
+    const isChecked = await checkbox.evaluate((el) => el.getAttribute('aria-checked') === 'true');
+    if (isChecked !== desiredState) await checkbox.click({ force: true });
+  }
+
+  async getStatusSaveButton(): Promise<boolean> {
+    const saveBtn = this.page.locator("[icon='save']");
+    const ariaDisabled = await saveBtn.getAttribute('aria-disabled');
+    return ariaDisabled !== 'true';
+  }
+
+  async clickSaveButton() {
+    await this.page.locator("[icon='save']").click();
+  }
+
+  async clickCheckboxSelectAllPlaylist() {
+    await this.page.locator('paper-checkbox').filter({ hasText: /seleccionar todo|select all/i }).nth(0).click({ force: true });
+  }
+
+  async clickNextButton() {
+    await this.page.locator('paper-button').filter({ hasText: /siguiente|next/i }).first().click();
+    await this.page.waitForTimeout(500);
+  }
+
+  async clickNextButton2() {
+    await this.page.locator('paper-button').filter({ hasText: /siguiente|next/i }).nth(1).click();
+    await this.page.waitForTimeout(500);
+  }
+
+  async clickOnAllCheckboxes() {
+    const checkboxes = this.page.locator('paper-checkbox');
+    const count = await checkboxes.count();
+    for (let i = 0; i < count; i++) {
+      const cb = checkboxes.nth(i);
+      const checked = await cb.evaluate((el) => el.getAttribute('aria-checked') === 'true');
+      if (!checked) await cb.click({ force: true });
+    }
+  }
+
+  async typeReplaceCombo(value: string) {
+    const input = this.page.locator("vaadin-text-field[part='text-field'] input[part='value']").nth(1);
+    await input.fill(value, { force: true });
+    await input.press('ArrowDown');
+    await input.press('Enter');
+  }
+
+  async typeNoReplaceCombo(value: string) {
+    const input = this.page.locator("vaadin-text-field[part='text-field'] input[part='value']").nth(2);
+    await input.fill(value, { force: true });
+    await input.press('ArrowDown');
+    await input.press('Enter');
+  }
+
+  async typeProductCombo(value: string) {
+    const input = this.page.locator("vaadin-text-field[part='text-field'] input[part='value']").nth(3);
+    await input.fill(value, { force: true });
+    await input.press('ArrowDown');
+    await input.press('Enter');
+  }
+
+  async clickConfirmButton() {
+    await this.page.locator('paper-button').filter({ hasText: /confirmar|confirm/i }).last().click({ force: true });
+    await this.page.waitForTimeout(2000);
+  }
+
+  async compareFullMessage(pattern: RegExp) {
+    const text = await this.page.locator('paper-dialog').last().textContent();
+    if (!pattern.test(text ?? '')) throw new Error(`Message does not match ${pattern}: "${text}"`);
+  }
+
+  async rightClickOnMedia(mediaName: string) {
+    await this.page.evaluate((name: string) => {
+      function findInShadow(root: Document | ShadowRoot, sel: string): HTMLElement | null {
+        const found = root.querySelector(sel) as HTMLElement | null;
+        if (found) return found;
+        for (const el of root.querySelectorAll('*')) {
+          const sr = (el as Element & { shadowRoot?: ShadowRoot }).shadowRoot;
+          if (sr) { const r = findInShadow(sr, sel); if (r) return r; }
+        }
+        return null;
+      }
+      const card = findInShadow(document, `dex-media-card[slot='card'][title='${name}']`) ??
+                   findInShadow(document, `[title='${name}']`);
+      if (card) card.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+      else throw new Error(`Media card not found for right-click: ${name}`);
+    }, mediaName);
+  }
+
+  async clickReplaceMedia() {
+    await this.page.locator('paper-item').filter({ hasText: /reemplazar|replace/i }).first().click({ force: true });
+    await this.page.waitForTimeout(2500);
+  }
+
+  async clickRemoveMedia() {
+    await this.page.locator('paper-item').filter({ hasText: /quitar|remove/i }).first().click({ force: true });
+    await this.page.waitForTimeout(1500);
+  }
+
+  async searchMediatoReplace2(mediaName: string) {
+    const input = this.page.locator('#dexMediaReplaceDetail input[placeholder]').first();
+    await input.fill(mediaName, { force: true });
+    await input.press('Enter');
+    await this.page.waitForTimeout(1000);
+  }
+
+  async findFolderForMediaReplace(folderName: string) {
+    await this.page.locator('.folder-item, dex-folder-item').filter({ hasText: folderName }).first().click();
+    await this.page.waitForTimeout(500);
+  }
+
+  async clickOnReplacementMedia(mediaName: string) {
+    await this.page.locator('dex-media-card').filter({ hasText: mediaName }).first().click();
+  }
+
+  async clickContinueBtn() {
+    await this.page.locator('paper-button').filter({ hasText: /continuar|continue/i }).first().click();
+    await this.page.waitForTimeout(1000);
+  }
+
+  async clickSecondContinueBtn() {
+    await this.page.locator('paper-button').filter({ hasText: /continuar|continue/i }).nth(1).click();
+    await this.page.waitForTimeout(1000);
+  }
+
+  async clickSelectAllCheckBox() {
+    await this.page.locator('paper-checkbox').filter({ hasText: /seleccionar todo|select all/i }).first().click({ force: true });
+  }
+
+  async clickPlaylistCheckbox(playlistName: string) {
+    await this.page.locator('paper-checkbox').filter({ hasText: playlistName }).first().click({ force: true });
+  }
+
+  async clickConfirmBtn() {
+    await this.page.locator('paper-button').filter({ hasText: /confirmar|confirm/i }).last().click({ force: true });
+    await this.page.waitForTimeout(600);
+  }
+
+  async deleteMediaFromLibrary(mediaName: string) {
+    await this.page.evaluate((name: string) => {
+      function findInShadow(root: Document | ShadowRoot, sel: string): HTMLElement | null {
+        const found = root.querySelector(sel) as HTMLElement | null;
+        if (found) return found;
+        for (const el of root.querySelectorAll('*')) {
+          const sr = (el as Element & { shadowRoot?: ShadowRoot }).shadowRoot;
+          if (sr) { const r = findInShadow(sr, sel); if (r) return r; }
+        }
+        return null;
+      }
+      const card = findInShadow(document, `dex-media-card[slot='card'][title='${name}']`) ??
+                   findInShadow(document, `[title='${name}']`);
+      if (card) card.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+      else throw new Error(`Media card not found: ${name}`);
+    }, mediaName);
+    await this.page.locator('paper-item').filter({ hasText: /eliminar|delete/i }).first().click({ force: true });
+    await this.page.locator('paper-button[role="button"]').filter({ hasText: /Confirmar|Confirm|Aceptar|Accept/i }).first().click();
+    await this.page.waitForTimeout(500);
+  }
+
   async clickCloseBtn() {
     // The close button is inside #dexMediaDetail — scope search to that container
     await this.page.evaluate(() => {

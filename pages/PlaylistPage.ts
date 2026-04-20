@@ -20,6 +20,8 @@ export class PlaylistPage extends BasePage {
     mediaInChannel:      (channel: number, name: string) =>
       this.page.locator('.horizontal.layout.flex.media-container').nth(channel - 1).locator(`div[title='${name}']`),
     mediaInChannelPos:   (cp: string) => this.page.locator(`div[data-id='${cp}']`),
+    searchPlaylistInput: () => this.findElement({ get: '#dexPlaylistList', find: ['.search-input', 'input'] }),
+    resultingPlaylist:   () => this.findElement({ get: '#dexPlaylistList', find: ["div[slot='row']"], eq: 0 }),
     fromHourInput:       () => this.findElement({ get: 'paper-input.flex.input', eq: 0, find: ["input[autocomplete='off']"] }),
     toHourInput:         () => this.findElement({ get: 'paper-input.flex.input', eq: 1, find: ["input[autocomplete='off']"] }),
     fromHourRecurrence:  () => this.findElement({ get: 'paper-input.flex.input', eq: 2, find: ["input[autocomplete='off']"] }),
@@ -234,6 +236,37 @@ export class PlaylistPage extends BasePage {
     await this.clickMediaInChannelPos(channel, position);
     await this.clickCondicionalTab();
     await this.assingExclusionTagInput(tag);
+  }
+
+  async searchPlaylist(playlistName: string) {
+    await this.elements.searchPlaylistInput().click({ force: true });
+    await this.elements.searchPlaylistInput().fill('', { force: true });
+    await this.elements.searchPlaylistInput().fill(playlistName, { force: true });
+    await this.elements.searchPlaylistInput().press('Enter');
+    await this.page.waitForTimeout(800);
+  }
+
+  async clickResultingPlaylist() {
+    await this.elements.resultingPlaylist().click();
+  }
+
+  async clickMediaInchannelInPosition(channel: number, position: number) {
+    const cp = `${channel}-${position - 1}`;
+    await this.elements.mediaInChannelPos(cp).click();
+  }
+
+  async verifyEqualMediaTitle(name: string) {
+    const titleEl = this.page.locator('.paper-material.timelineElement.selected [title]').first();
+    const attr = await titleEl.getAttribute('title');
+    if (!(attr ?? '').includes(name)) throw new Error(`Expected media title "${name}" but got "${attr}"`);
+  }
+
+  async deletePlaylist(playlistName: string) {
+    await this.searchPlaylist(playlistName);
+    await this.elements.resultingPlaylist().click();
+    await this.page.locator('#dexPlaylistDetail paper-icon-button[icon="delete"]').click();
+    await this.page.locator('paper-button[role="button"]').filter({ hasText: /Aceptar|Accept/i }).first().click();
+    await this.page.waitForTimeout(500);
   }
 
   async assingMediaTochannels(config: { medias: string[] }) {
