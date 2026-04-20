@@ -20,6 +20,8 @@ export class TagPage extends BasePage {
   }
 
   async typeTagName(tagName: string) {
+    await this.elements.nameInput().waitFor({ state: 'visible' });
+    await this.elements.nameInput().scrollIntoViewIfNeeded();
     await this.elements.nameInput().click({ force: true });
     await this.elements.nameInput().fill(tagName, { force: true });
   }

@@ -37,7 +37,6 @@ test.describe('Create a TAG and assign it to the group', () => {
     await tagPage.clickAddBtn();
     await tagPage.typeTagName(tagName);
     await tagPage.clickSaveBtn();
-    await page.waitForTimeout(300);
     await page.screenshot({ path: 'screenshots/cp21pp_tag.png' });
 
     await globalPage.clickNetwork();
@@ -46,7 +45,6 @@ test.describe('Create a TAG and assign it to the group', () => {
     await networkPage.clickResultingGroup();
     await groupDetailPage.completeTagSelect(tagName);
     await groupDetailPage.clickSaveGroupBtn();
-    await page.waitForTimeout(300);
     await page.screenshot({ path: 'screenshots/cp21pp_group.png' });
 
     // Validar tag en player1

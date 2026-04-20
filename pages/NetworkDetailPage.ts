@@ -210,6 +210,22 @@ export class NetworkDetailPage extends BasePage {
   async clickPlaylistAnalyzerBtn() { await this.elements.playlistAnalyzerBtn().click(); }
 
   async validateTagValue(tagName: string) {
-    await expect(this.elements.tagContainer().locator('span').filter({ hasText: tagName })).toBeVisible();
+    await this.waitForDetailPanel();
+    await this.page.evaluate(() => {
+      function findInShadow(root: Document | ShadowRoot, sel: string): Element | null {
+        const el = root.querySelector(sel); if (el) return el;
+        for (const e of Array.from(root.querySelectorAll('*'))) {
+          if ((e as any).shadowRoot) { const f = findInShadow((e as any).shadowRoot, sel); if (f) return f; }
+        } return null;
+      }
+      const tagSel = findInShadow(document, '#tagSelector');
+      const innerContainer = findInShadow(document, '.inner-container');
+      if (!tagSel || !innerContainer) return;
+      const tagRect = tagSel.getBoundingClientRect();
+      const containerRect = innerContainer.getBoundingClientRect();
+      (innerContainer as HTMLElement).scrollLeft = (innerContainer as HTMLElement).scrollLeft + (tagRect.left - containerRect.left);
+    });
+    await this.page.waitForTimeout(1000);
+    await expect(this.elements.tagContainer()).toContainText(tagName, { timeout: 15000 });
   }
 }

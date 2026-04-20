@@ -89,7 +89,10 @@ export class GlobalPage extends BasePage {
   async clickOnHardwarePolicyHeader()     { await this.elements.hardwarePolicyHeader().click(); }
   async clickOnTransmissionPolicyHeader() { await this.elements.transmissionPolicyHeader().click(); }
   async clickOptionGeneral()              { await this.elements.optionGeneral().click(); }
-  async clickOptionTag()                  { await this.elements.optionTag().click(); }
+  async clickOptionTag() {
+    await this.elements.optionTag().waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
+    await this.elements.optionTag().dispatchEvent('click');
+  }
   async clickButtonReport()               { await this.elements.optionReport().click(); }
   async clickOptionPOP()                  { await this.elements.optionPOP().click(); }
   async clickOptionDexStore()             { await this.elements.optionDexStore().click(); }

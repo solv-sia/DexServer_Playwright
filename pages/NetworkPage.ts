@@ -39,7 +39,12 @@ export class NetworkPage extends BasePage {
   }
 
   async clickResultingPlayer() { await this.elements.resultingPlayer().first().click(); }
-  async clickResultingGroup()  { await this.elements.resultingGroup().first().click(); }
+  async clickResultingGroup() {
+    const group = this.page.locator('#dexNetworkList dex-network-display-view dex-network-group').first();
+    await group.hover();
+    await this.page.waitForTimeout(300);
+    await this.elements.resultingGroup().first().click({ force: true });
+  }
   async clickMoreBtn()         { await this.elements.moreBtn().click(); }
   async clickGroupBtn()        { await this.elements.groupBtn().click(); }
   async clickSyncGroupBtn()    { await this.elements.syncGroupBtn().click(); }

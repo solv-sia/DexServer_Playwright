@@ -18,7 +18,7 @@ export class GroupDetailPage extends BasePage {
     ipMulticastInput2:      () => this.dialog().locator('paper-icon-item:has(iron-icon[icon="room"]) paper-input').nth(2).locator('input'),
     ipMulticastInput3:      () => this.dialog().locator('paper-icon-item:has(iron-icon[icon="room"]) paper-input').nth(3).locator('input'),
     synchronizationCombo:   () => this.dialog().locator('paper-icon-item:has(iron-icon[icon="notification:sync"]) vaadin-combo-box'),
-    tagCombo:               () => this.dialog().locator('paper-icon-item:has(iron-icon[icon="label"]) vaadin-combo-box'),
+    tagCombo:               () => this.dialog().locator('paper-icon-item:has(iron-icon[icon="label"])').first().locator('vaadin-combo-box'),
     channelOneInput:        () => this.dialog().locator('paper-icon-item:has(iron-icon[icon="label"])').nth(1).locator('vaadin-combo-box#tagInput input'),
     channelTwoInput:        () => this.dialog().locator('paper-icon-item:has(iron-icon[icon="label"])').nth(2).locator('vaadin-combo-box#tagInput input'),
     storeCombo:             () => this.dialog().locator('paper-icon-item:has(iron-icon[icon="store"]) vaadin-combo-box'),
