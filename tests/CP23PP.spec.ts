@@ -1,15 +1,13 @@
-// Verificar en BD que la versión del player quedó actualizada tras CP22PP
+// Solicitar logs y capturas al player (CP11PP player)
 import { test, expect } from '@playwright/test';
 import * as path from 'path';
 import config from '../utils/config';
 import { GlobalPage } from '../pages/GlobalPage';
 import { NetworkPage } from '../pages/NetworkPage';
-import { NetworkDetailPage } from '../pages/NetworkDetailPage';
-// import { connectDB, dbGetPlayerVersion } from '../utils/dbHelper';
 
 test.use({ storageState: path.join(__dirname, '../auth/storageState.json') });
 
-test.describe('Verificar versión del player en BD (post CP22PP)', () => {
+test.describe('Solicitar logs y capturas al player', () => {
   test('@CP23PP', async ({ page }) => {
     test.setTimeout(60000);
 
@@ -17,7 +15,6 @@ test.describe('Verificar versión del player en BD (post CP22PP)', () => {
 
     const globalPage = new GlobalPage(page);
     const networkPage = new NetworkPage(page);
-    const networkDetailPage = new NetworkDetailPage(page);
 
     await globalPage.waitSpinner();
     await globalPage.switchToNewTenant(config.clientName);
@@ -25,34 +22,51 @@ test.describe('Verificar versión del player en BD (post CP22PP)', () => {
     await page.reload({ waitUntil: 'domcontentloaded' });
     await globalPage.waitSpinner();
 
-    // ── Obtener versión desde UI ──────────────────────────────────────────────
     await globalPage.clickNetwork();
-    await networkPage.clearAndSearch(config.playerCP11PP);
-    await page.waitForTimeout(1500);
-    await networkPage.clickResultingPlayer();
+    await networkPage.clearAndSearch(config.player1);
+    await globalPage.waitSpinner();
+
+    // Enviar comando de logs
+    await networkPage.clickDisplayCheck();
     await page.waitForTimeout(1000);
+    await networkPage.clickBotonera();
+    await page.waitForTimeout(1000);
+    await networkPage.clickSendLogCommand();
+    await page.waitForTimeout(1000);
+    await networkPage.clickConfirmButton();
+    await globalPage.readInfoPopup(/solicitud enviada|request sended/i);
 
-    const uiVersion = await networkDetailPage.getCurrentVersion();
-    expect(uiVersion.trim().length).toBeGreaterThan(0);
+    // Enviar comando de screenshot
+    await networkPage.clickDisplayCheck();
+    await page.waitForTimeout(1000);
+    await networkPage.clickBotonera();
+    await page.waitForTimeout(1000);
+    await networkPage.clickSendScreenshotCommand();
+    await page.waitForTimeout(1000);
+    await networkPage.clickConfirmButton();
+    await globalPage.readInfoPopup(/solicitud enviada|request sended/i);
 
-    await page.screenshot({ path: 'screenshots/cp23pp_ui.png' });
+    await page.screenshot({ path: 'screenshots/cp23pp.png' });
 
-    // ── Verificación BD ───────────────────────────────────────────────────────
-    // La versión mostrada en UI debe coincidir con la registrada en la BD.
-    // Descomentar cuando se implemente connectDB():
-    //
-    // const db = await connectDB();
-    // try {
-    //   const dbVersion = await dbGetPlayerVersion(db, config.playerCP11PP);
-    //   expect(dbVersion).not.toBeNull();
-    //   expect(dbVersion!.trim()).toBe(uiVersion.trim());
-    // } finally {
-    //   await db.close();
-    // }
-    //
-    // Adicionalmente verificar que la versión sea una de las dos conocidas:
-    // const knownVersions = [config.previousVersion.trim(), config.latestVersion.trim()];
-    // expect(knownVersions).toContain(dbVersion!.trim());
-    // ─────────────────────────────────────────────────────────────────────────
+    // Polling: hace el fetch desde el contexto del browser (misma sesión/cookies)
+    const hbUrl = `${config.baseUrl}/DexFrontend/api/v3/heartBeatSync/${config.machineIdCP23PP}/${config.messageKeyCP23PP}`;
+    let hasSNDLGS = false;
+    let hasSCNSHT = false;
+
+    for (let i = 0; i < 10; i++) {
+      const commandList: string[] = await page.evaluate(async (url) => {
+        const res = await fetch(url, { method: 'POST' });
+        const data = await res.json();
+        return data.CommandList ?? [];
+      }, hbUrl);
+
+      hasSNDLGS = commandList.some((cmd: string) => String(cmd).includes('SNDLGS'));
+      hasSCNSHT = commandList.some((cmd: string) => String(cmd).includes('SCNSHT'));
+      if (hasSNDLGS && hasSCNSHT) break;
+      await page.waitForTimeout(2000);
+    }
+
+    expect(hasSNDLGS, 'El comando SNDLGS no está en el CommandList del HB').toBe(true);
+    expect(hasSCNSHT, 'El comando SCNSHT no está en el CommandList del HB').toBe(true);
   });
 });

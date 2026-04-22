@@ -25,6 +25,14 @@ export class NetworkPage extends BasePage {
     superFilterCondition:(i = 0) => this.page.locator('#rowFilter #isMenu input[placeholder="Condición"], #rowFilter #isMenu input[placeholder="Condition"]').nth(i),
     superFilterTagInput: (i = 0) => this.page.locator('dex-new-combo-tags-filter vaadin-combo-box#tagInput vaadin-text-field#input input').nth(i),
     superFilterApplyBtn: () => this.page.locator('#advanceFilter paper-button.custom-button.blue').filter({ hasText: /Aplicar|Apply/i }),
+    displayCheck:        () => this.findElement({ get: '#dexNetworkList', find: ['dex-network-display-card', '#displayCheckbox', '#checkboxLabel'] }),
+    botonera:            () => this.findElement({ get: '#dexNetworkList', find: ["dex-fab-menu[icon-start='settings-remote']", '#mainFab', '#paperFab'] }),
+    sendLogCommand:        () => this.page.locator("paper-fab[title='Enviar Logs'], paper-fab[title='Request Logs']").first(),
+    sendScreenshotCommand: () => this.page.locator("paper-fab[title='Capturar Pantalla'], paper-fab[title='Request Screenshot']").first(),
+    rebootCommand:         () => this.page.locator("paper-fab[title='Reiniciar'], paper-fab[title='Reboot']").first(),
+    mediaCleanCommand:     () => this.page.locator("paper-fab[title='Borrar media'], paper-fab[title='Delete media']").first(),
+    resetCommand:          () => this.page.locator("paper-fab[title='Borrado de fabrica'], paper-fab[title='Hard Reset']").first(),
+    confirmButton:         () => this.findElement({ get: '#commandDialog', find: ['paper-button'], eq: 1 }),
   };
 
   async clearAndSearch(name: string) {
@@ -124,4 +132,13 @@ export class NetworkPage extends BasePage {
     await this.elements.deleteGroupBtn().click({ force: true });
     await this.elements.confirmDeleteGroupBtn().click({ force: true });
   }
+
+  async clickDisplayCheck()        { await this.elements.displayCheck().first().dispatchEvent('click'); }
+  async clickBotonera()             { await this.elements.botonera().dispatchEvent('click'); }
+  async clickSendLogCommand()       { await this.elements.sendLogCommand().dispatchEvent('click'); }
+  async clickSendScreenshotCommand(){ await this.elements.sendScreenshotCommand().dispatchEvent('click'); }
+  async clickRebootCommand()        { await this.elements.rebootCommand().dispatchEvent('click'); }
+  async clickMediaCleanCommand()    { await this.elements.mediaCleanCommand().dispatchEvent('click'); }
+  async clickResetCommand()         { await this.elements.resetCommand().dispatchEvent('click'); }
+  async clickConfirmButton()        { await this.elements.confirmButton().dispatchEvent('click'); }
 }

@@ -1,15 +1,13 @@
-// Verificar en BD que la última actividad del player es reciente (heartbeat)
+// Enviar borrado de media al player (CP25PP)
 import { test, expect } from '@playwright/test';
 import * as path from 'path';
 import config from '../utils/config';
 import { GlobalPage } from '../pages/GlobalPage';
 import { NetworkPage } from '../pages/NetworkPage';
-import { NetworkDetailPage } from '../pages/NetworkDetailPage';
-// import { connectDB, dbGetPlayerLastActivity } from '../utils/dbHelper';
 
 test.use({ storageState: path.join(__dirname, '../auth/storageState.json') });
 
-test.describe('Verificar última actividad del player en BD (heartbeat)', () => {
+test.describe('Enviar borrado de media al player', () => {
   test('@CP25PP', async ({ page }) => {
     test.setTimeout(60000);
 
@@ -17,7 +15,6 @@ test.describe('Verificar última actividad del player en BD (heartbeat)', () => 
 
     const globalPage = new GlobalPage(page);
     const networkPage = new NetworkPage(page);
-    const networkDetailPage = new NetworkDetailPage(page);
 
     await globalPage.waitSpinner();
     await globalPage.switchToNewTenant(config.clientName);
@@ -25,40 +22,36 @@ test.describe('Verificar última actividad del player en BD (heartbeat)', () => 
     await page.reload({ waitUntil: 'domcontentloaded' });
     await globalPage.waitSpinner();
 
-    // ── Verificación UI ───────────────────────────────────────────────────────
-    // El campo "Última actividad" debe mostrarse en el detalle del player.
     await globalPage.clickNetwork();
-    await networkPage.clearAndSearch(config.playerCP11PP);
-    await page.waitForTimeout(1500);
-    await networkPage.clickResultingPlayer();
+    await networkPage.clearAndSearch(config.player1);
+    await globalPage.waitSpinner();
+
+    await networkPage.clickDisplayCheck();
     await page.waitForTimeout(1000);
+    await networkPage.clickBotonera();
+    await page.waitForTimeout(1000);
+    await networkPage.clickMediaCleanCommand();
+    await page.waitForTimeout(1000);
+    await networkPage.clickConfirmButton();
+    await globalPage.readInfoPopup(/solicitud enviada|request sended/i);
 
-    // Capturar texto de última actividad visible en la UI
-    const lastActivityUI = page.locator(
-      'paper-icon-item'
-    ).filter({ hasText: /última actividad|last activity/i }).first();
+    await page.screenshot({ path: 'screenshots/cp25pp.png' });
 
-    const uiText = await lastActivityUI.textContent().catch(() => null);
-    // Solo verificamos que exista el campo — el formato depende del locale
-    expect(uiText?.trim().length ?? 0).toBeGreaterThan(0);
+    const hbUrl = `${config.baseUrl}/DexFrontend/api/v3/heartBeatSync/${config.machineIdCP23PP}/${config.messageKeyCP23PP}`;
+    let hasCLEANMEDIA = false;
 
-    await page.screenshot({ path: 'screenshots/cp25pp_ui.png' });
+    for (let i = 0; i < 10; i++) {
+      const commandList: string[] = await page.evaluate(async (url) => {
+        const res = await fetch(url, { method: 'POST' });
+        const data = await res.json();
+        return data.CommandList ?? [];
+      }, hbUrl);
 
-    // ── Verificación BD ───────────────────────────────────────────────────────
-    // La última actividad en BD debe ser reciente (heartbeat del player).
-    // Descomentar cuando se implemente connectDB():
-    //
-    // const db = await connectDB();
-    // try {
-    //   const lastActivity = await dbGetPlayerLastActivity(db, config.playerCP11PP);
-    //   expect(lastActivity).not.toBeNull();
-    //
-    //   // El heartbeat debe haber llegado en las últimas 2 horas
-    //   const twoHoursMs = 2 * 60 * 60 * 1000;
-    //   expect(Date.now() - lastActivity!.getTime()).toBeLessThan(twoHoursMs);
-    // } finally {
-    //   await db.close();
-    // }
-    // ─────────────────────────────────────────────────────────────────────────
+      hasCLEANMEDIA = commandList.some((cmd: string) => String(cmd).includes('CLEANMEDIA'));
+      if (hasCLEANMEDIA) break;
+      await page.waitForTimeout(2000);
+    }
+
+    expect(hasCLEANMEDIA, 'El comando CLEANMEDIA no está en el CommandList del HB').toBe(true);
   });
 });

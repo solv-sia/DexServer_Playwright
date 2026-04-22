@@ -1,15 +1,13 @@
-// Verificar en BD que la playlist y calendario asignados al player coinciden con UI
+// Enviar borrado de fábrica al player (CP26PP)
 import { test, expect } from '@playwright/test';
 import * as path from 'path';
 import config from '../utils/config';
 import { GlobalPage } from '../pages/GlobalPage';
 import { NetworkPage } from '../pages/NetworkPage';
-import { NetworkDetailPage } from '../pages/NetworkDetailPage';
-// import { connectDB, dbGetPlayerPlaylist } from '../utils/dbHelper';
 
 test.use({ storageState: path.join(__dirname, '../auth/storageState.json') });
 
-test.describe('Verificar asignaciones del player en BD (playlist / calendario)', () => {
+test.describe('Enviar borrado de fábrica al player', () => {
   test('@CP26PP', async ({ page }) => {
     test.setTimeout(60000);
 
@@ -17,7 +15,6 @@ test.describe('Verificar asignaciones del player en BD (playlist / calendario)',
 
     const globalPage = new GlobalPage(page);
     const networkPage = new NetworkPage(page);
-    const networkDetailPage = new NetworkDetailPage(page);
 
     await globalPage.waitSpinner();
     await globalPage.switchToNewTenant(config.clientName);
@@ -25,39 +22,36 @@ test.describe('Verificar asignaciones del player en BD (playlist / calendario)',
     await page.reload({ waitUntil: 'domcontentloaded' });
     await globalPage.waitSpinner();
 
-    // ── Leer asignaciones desde UI ────────────────────────────────────────────
     await globalPage.clickNetwork();
-    await networkPage.clearAndSearch(config.playerCP11PP);
-    await page.waitForTimeout(1500);
-    await networkPage.clickResultingPlayer();
+    await networkPage.clearAndSearch(config.player1);
+    await globalPage.waitSpinner();
+
+    await networkPage.clickDisplayCheck();
     await page.waitForTimeout(1000);
+    await networkPage.clickBotonera();
+    await page.waitForTimeout(1000);
+    await networkPage.clickResetCommand();
+    await page.waitForTimeout(1000);
+    await networkPage.clickConfirmButton();
+    await globalPage.readInfoPopup(/solicitud enviada|request sended/i);
 
-    // Leer playlist asignada al player (campo de detalle)
-    const plInput = page.locator(
-      'dex-network-display-detail#dexNetworkDetail dex-playlist-combo #playlistMenu input'
-    );
-    const uiPlaylist = (await plInput.inputValue()).trim();
-    expect(uiPlaylist.length).toBeGreaterThan(0);
+    await page.screenshot({ path: 'screenshots/cp26pp.png' });
 
-    await page.screenshot({ path: 'screenshots/cp26pp_ui.png' });
+    const hbUrl = `${config.baseUrl}/DexFrontend/api/v3/heartBeatSync/${config.machineIdCP23PP}/${config.messageKeyCP23PP}`;
+    let hasRESET = false;
 
-    // ── Verificación BD ───────────────────────────────────────────────────────
-    // La playlist registrada en BD debe coincidir con la mostrada en UI.
-    // Descomentar cuando se implemente connectDB():
-    //
-    // const db = await connectDB();
-    // try {
-    //   const dbPlaylist = await dbGetPlayerPlaylist(db, config.playerCP11PP);
-    //   expect(dbPlaylist).not.toBeNull();
-    //
-    //   // El valor en BD puede incluir "(heredado)" o el nombre directo
-    //   // — ajustar la comparación según el schema real:
-    //   expect(uiPlaylist.toLowerCase()).toContain(
-    //     (dbPlaylist ?? '').toLowerCase().replace(/\s*\(heredado\)/i, '').trim()
-    //   );
-    // } finally {
-    //   await db.close();
-    // }
-    // ─────────────────────────────────────────────────────────────────────────
+    for (let i = 0; i < 10; i++) {
+      const commandList: string[] = await page.evaluate(async (url) => {
+        const res = await fetch(url, { method: 'POST' });
+        const data = await res.json();
+        return data.CommandList ?? [];
+      }, hbUrl);
+
+      hasRESET = commandList.some((cmd: string) => String(cmd).includes('RESET'));
+      if (hasRESET) break;
+      await page.waitForTimeout(2000);
+    }
+
+    expect(hasRESET, 'El comando RESET no está en el CommandList del HB').toBe(true);
   });
 });

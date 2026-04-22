@@ -104,6 +104,10 @@ const config = {
   previousVersion: configJson.previousVersion,
   latestVersion: configJson.latestVersion,
 
+  // CP23PP
+  machineIdCP23PP: configJson.machineIdCP23PP,
+  messageKeyCP23PP: configJson.messageKeyCP23PP,
+
   // CP27/28PP
   replaceAndRemoveMediaPath: configJson.replaceAndRemoveMediaPath,
   removeMediaPath: configJson.removeMediaPath,

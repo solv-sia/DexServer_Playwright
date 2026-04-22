@@ -1,14 +1,13 @@
-// Verificar en BD que los eventos de descarga del player existen y son recientes
+// Enviar reinicio al player (CP24PP)
 import { test, expect } from '@playwright/test';
 import * as path from 'path';
 import config from '../utils/config';
 import { GlobalPage } from '../pages/GlobalPage';
 import { NetworkPage } from '../pages/NetworkPage';
-// import { connectDB, dbGetDownloadEvents } from '../utils/dbHelper';
 
 test.use({ storageState: path.join(__dirname, '../auth/storageState.json') });
 
-test.describe('Verificar eventos de descarga del player en BD', () => {
+test.describe('Enviar reinicio al player', () => {
   test('@CP24PP', async ({ page }) => {
     test.setTimeout(60000);
 
@@ -23,32 +22,36 @@ test.describe('Verificar eventos de descarga del player en BD', () => {
     await page.reload({ waitUntil: 'domcontentloaded' });
     await globalPage.waitSpinner();
 
-    // ── Verificación UI: el player sigue visible y accesible ──────────────────
     await globalPage.clickNetwork();
-    await networkPage.clearAndSearch(config.playerCP11PP);
-    await page.waitForTimeout(1500);
+    await networkPage.clearAndSearch(config.player1);
+    await globalPage.waitSpinner();
 
-    const playerCard = page.locator('dex-network-display-card').filter({ hasText: config.playerCP11PP });
-    await expect(playerCard).toBeVisible({ timeout: 10000 });
-    await page.screenshot({ path: 'screenshots/cp24pp_ui.png' });
+    await networkPage.clickDisplayCheck();
+    await page.waitForTimeout(1000);
+    await networkPage.clickBotonera();
+    await page.waitForTimeout(1000);
+    await networkPage.clickRebootCommand();
+    await page.waitForTimeout(1000);
+    await networkPage.clickConfirmButton();
+    await globalPage.readInfoPopup(/solicitud enviada|request sended/i);
 
-    // ── Verificación BD ───────────────────────────────────────────────────────
-    // Verificar que existen eventos de descarga recientes para el player.
-    // Descomentar cuando se implemente connectDB():
-    //
-    // const db = await connectDB();
-    // try {
-    //   const events = await dbGetDownloadEvents(db, config.playerCP11PP);
-    //   expect(events.length).toBeGreaterThan(0);
-    //
-    //   // El evento más reciente no debe tener más de 24 horas de antigüedad
-    //   const latestEvent = events[0];
-    //   const eventTime = new Date(latestEvent.CreatedAt as string).getTime();
-    //   const oneDayMs = 24 * 60 * 60 * 1000;
-    //   expect(Date.now() - eventTime).toBeLessThan(oneDayMs);
-    // } finally {
-    //   await db.close();
-    // }
-    // ─────────────────────────────────────────────────────────────────────────
+    await page.screenshot({ path: 'screenshots/cp24pp.png' });
+
+    const hbUrl = `${config.baseUrl}/DexFrontend/api/v3/heartBeatSync/${config.machineIdCP23PP}/${config.messageKeyCP23PP}`;
+    let hasREBOOT = false;
+
+    for (let i = 0; i < 10; i++) {
+      const commandList: string[] = await page.evaluate(async (url) => {
+        const res = await fetch(url, { method: 'POST' });
+        const data = await res.json();
+        return data.CommandList ?? [];
+      }, hbUrl);
+
+      hasREBOOT = commandList.some((cmd: string) => String(cmd).includes('REBOOT'));
+      if (hasREBOOT) break;
+      await page.waitForTimeout(2000);
+    }
+
+    expect(hasREBOOT, 'El comando REBOOT no está en el CommandList del HB').toBe(true);
   });
 });

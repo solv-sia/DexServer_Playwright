@@ -72,6 +72,8 @@
   "allowTime": "05:00",
   "previousVersion": "6.4.2408.2600",
   "latestVersion": "6.4.2408.2604",
+  "machineIdCP23PP": 5412,
+  "messageKeyCP23PP": "BEF127DA-8FF2-45CF-9B38-2D7FDBC2BF38",
   "replaceAndRemoveMediaPath": "PPU DEX/img",
   "removeMediaPath": "PPU DEX/img",
   "mediaToReplace": "CHANNEL 1, POSICION 1",

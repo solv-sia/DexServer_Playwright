@@ -60,12 +60,10 @@ test.describe('Actualizar la version de los players (probar downgrade y upgrade)
       for (let i = 0; i < maxRetries; i++) {
         const ver = await networkDetailPage.getCurrentVersion();
         if (ver.trim() === targetVersion) break;
+        await page.waitForTimeout(15000);
         await page.reload({ waitUntil: 'domcontentloaded' });
         await globalPage.waitSpinner();
-        await networkPage.clearAndSearch(config.playerCP11PP);
-        await page.waitForTimeout(2000);
-        await networkPage.clickResultingPlayer();
-        await page.waitForTimeout(2000);
+        await page.waitForTimeout(15000);
       }
     };
 
