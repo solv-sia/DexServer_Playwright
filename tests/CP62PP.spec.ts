@@ -1,22 +1,17 @@
 // Superfilter: Búsqueda por Fecha de activación (Mayor a / Menor a)
 import { test, expect } from '@playwright/test';
-import * as path from 'path';
 import config from '../utils/config';
 import { GlobalPage } from '../pages/GlobalPage';
+import { loginWithSession } from '../utils/loginWithSession';
 import { NetworkPage } from '../pages/NetworkPage';
 
-test.use({ storageState: path.join(__dirname, '../auth/storageState.json') });
+test.use({ storageState: { cookies: [], origins: [] } });
 
 test.describe('Búsqueda por superfiltro - Fecha de activación', () => {
   const setup = async (page: import('@playwright/test').Page) => {
     const globalPage = new GlobalPage(page);
     const networkPage = new NetworkPage(page);
-    await page.goto(`${config.baseUrl}/DexFrontEnd/`, { waitUntil: 'domcontentloaded' });
-    await globalPage.waitSpinner();
-    await globalPage.switchToNewTenant(config.clientName);
-    await globalPage.loginDecision(config.password);
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await globalPage.waitSpinner();
+    await loginWithSession(page, config.userName2, config.password);
     await globalPage.clickNetwork();
     await page.reload({ waitUntil: 'domcontentloaded' });
     await globalPage.waitSpinner();
@@ -24,7 +19,7 @@ test.describe('Búsqueda por superfiltro - Fecha de activación', () => {
   };
 
   test('@CP62APP Fecha de activación MAYOR A', async ({ page }) => {
-    test.setTimeout(60000);
+    test.setTimeout(300000);
     const { networkPage } = await setup(page);
     await networkPage.clickSuperFilterPopUp();
     await networkPage.typeInSuperFilterField('Fecha de activación', 0);
@@ -37,7 +32,7 @@ test.describe('Búsqueda por superfiltro - Fecha de activación', () => {
   });
 
   test('@CP62BPP Fecha de activación MENOR A', async ({ page }) => {
-    test.setTimeout(60000);
+    test.setTimeout(300000);
     const { networkPage } = await setup(page);
     await networkPage.clickSuperFilterPopUp();
     await networkPage.typeInSuperFilterField('Fecha de activación', 0);

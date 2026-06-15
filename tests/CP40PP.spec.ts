@@ -1,29 +1,24 @@
 // Asignar playlist de supertenant al player y verificar en UI y BD
 import { test, expect } from '@playwright/test';
-import * as path from 'path';
 import config from '../utils/config';
 import { GlobalPage } from '../pages/GlobalPage';
+import { loginWithSession } from '../utils/loginWithSession';
 import { NetworkPage } from '../pages/NetworkPage';
 import { NetworkDetailPage } from '../pages/NetworkDetailPage';
 // import { connectDB, dbGetPlayerPlaylist } from '../utils/dbHelper';
 
-test.use({ storageState: path.join(__dirname, '../auth/storageState.json') });
+test.use({ storageState: { cookies: [], origins: [] } });
 
 test.describe('Asignar playlist de supertenant al player (CP40PP)', () => {
   test('@CP40PP', async ({ page }) => {
-    test.setTimeout(90000);
+    test.setTimeout(300000);
 
-    await page.goto(`${config.baseUrl}/DexFrontEnd/`, { waitUntil: 'domcontentloaded' });
 
     const globalPage = new GlobalPage(page);
     const networkPage = new NetworkPage(page);
     const networkDetailPage = new NetworkDetailPage(page);
 
-    await globalPage.waitSpinner();
-    await globalPage.switchToNewTenant(config.clientName);
-    await globalPage.loginDecision(config.password);
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await globalPage.waitSpinner();
+    await loginWithSession(page, config.userName2, config.password);
 
     // ── Asignar PL_CP40PP al player ───────────────────────────────────────────
     await globalPage.clickNetwork();

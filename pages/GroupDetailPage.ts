@@ -19,8 +19,8 @@ export class GroupDetailPage extends BasePage {
     ipMulticastInput3:      () => this.dialog().locator('paper-icon-item:has(iron-icon[icon="room"]) paper-input').nth(3).locator('input'),
     synchronizationCombo:   () => this.dialog().locator('paper-icon-item:has(iron-icon[icon="notification:sync"]) vaadin-combo-box'),
     tagCombo:               () => this.dialog().locator('paper-icon-item:has(iron-icon[icon="label"])').first().locator('vaadin-combo-box'),
-    channelOneInput:        () => this.dialog().locator('paper-icon-item:has(iron-icon[icon="label"])').nth(1).locator('vaadin-combo-box#tagInput input'),
-    channelTwoInput:        () => this.dialog().locator('paper-icon-item:has(iron-icon[icon="label"])').nth(2).locator('vaadin-combo-box#tagInput input'),
+    channelOneCombo:        () => this.dialog().locator('paper-icon-item:has(iron-icon[icon="label"])').nth(1).locator('vaadin-combo-box#tagInput'),
+    channelTwoCombo:        () => this.dialog().locator('paper-icon-item:has(iron-icon[icon="label"])').nth(2).locator('vaadin-combo-box#tagInput'),
     storeCombo:             () => this.dialog().locator('paper-icon-item:has(iron-icon[icon="store"]) vaadin-combo-box'),
     saveGroupBtn:           () => this.dialog().locator('paper-button').filter({ hasText: /Guardar|Save/i }),
     confirmDialog:          () => this.page.locator('#dexNetworkList #multiEditData #confirmDialog'),
@@ -36,7 +36,7 @@ export class GroupDetailPage extends BasePage {
   }
 
   async completeGroupNameInput(groupName: string) {
-    await this.elements.groupNameInput().click({ force: true });
+    await this.elements.groupNameInput().dispatchEvent('click');
     await this.elements.groupNameInput().fill(groupName, { force: true });
   }
 
@@ -47,6 +47,45 @@ export class GroupDetailPage extends BasePage {
   async completeSynchronizationSelect(time: string)    { await this.fillVaadinCombo(this.elements.synchronizationCombo(), time); }
   async completeTagSelect(tagName: string)             { await this.fillVaadinCombo(this.elements.tagCombo(), tagName); }
   async completeStoreSelect(storeName: string)         { await this.fillVaadinCombo(this.elements.storeCombo(), storeName); }
+
+  async selectFirstStoreOption(): Promise<string> {
+    const combo = this.elements.storeCombo();
+    const input = combo.locator('input');
+    await input.click({ force: true });
+    await this.page.locator('vaadin-combo-box-overlay[opened]').waitFor({ state: 'visible', timeout: 15000 });
+
+    // Find first non-ninguno item and its position in the filtered list
+    const result = await combo.evaluate((el: any) => {
+      const labelPath = el.itemLabelPath;
+      const items: any[] = el.filteredItems || el.items || [];
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        const text = typeof item === 'string'
+          ? item
+          : String(labelPath ? (item[labelPath] ?? '') : (item.label || item.name || item.Name || ''));
+        if (text && !/^(ninguno|none)$/i.test(text.trim())) {
+          return { index: i, label: text };
+        }
+      }
+      return null;
+    });
+
+    if (!result) throw new Error('No store options available in combo');
+
+    // Ninguno is already selected (cursor at index 0), so press ArrowDown result.index times
+    // to advance from index 0 to result.index
+    for (let i = 0; i < result.index; i++) {
+      await input.press('ArrowDown');
+      await this.page.waitForTimeout(50);
+    }
+    await input.press('Enter');
+    await this.page.locator('vaadin-combo-box-overlay[opened]').waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
+    await this.page.waitForTimeout(300);
+
+    // Return what the input actually shows (may differ from raw JS label format)
+    const displayed = await input.inputValue();
+    return displayed || result.label;
+  }
 
   async completeIpMulticastInput1(value: string) {
     await this.elements.ipMulticastInput1().fill(value, { force: true });
@@ -59,35 +98,23 @@ export class GroupDetailPage extends BasePage {
   }
 
   async completeChannelOneSelect(playerName: string) {
-    const input = this.elements.channelOneInput();
-    await input.click({ force: true });
-    await input.press('Control+a');
-    await input.pressSequentially(playerName, { delay: 50 });
-    await this.page.locator('vaadin-combo-box-overlay').waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
-    await this.page.waitForTimeout(300);
-    await input.press('ArrowDown');
-    await this.page.waitForTimeout(100);
-    await input.press('Enter');
+    await this.fillVaadinCombo(this.elements.channelOneCombo(), playerName);
   }
 
   async completeChannelTwoSelect(playerName: string) {
-    const input = this.elements.channelTwoInput();
-    await input.click({ force: true });
-    await input.press('Control+a');
-    await input.pressSequentially(playerName, { delay: 50 });
-    await this.page.locator('vaadin-combo-box-overlay').waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
-    await this.page.waitForTimeout(300);
-    await input.press('ArrowDown');
-    await this.page.waitForTimeout(100);
-    await input.press('Enter');
+    await this.fillVaadinCombo(this.elements.channelTwoCombo(), playerName);
   }
 
-  async clickSaveGroupBtn() { await this.elements.saveGroupBtn().click(); }
+  async clickSaveGroupBtn() {
+    await this.elements.saveGroupBtn().dispatchEvent('click');
+    await this.dialog().waitFor({ state: 'hidden', timeout: 15000 }).catch(() => {});
+    await this.page.waitForTimeout(500);
+  }
 
   async decisionConfirmPlayer() {
     try {
-      await this.elements.confirmDialog().waitFor({ state: 'visible', timeout: 4000 });
-      await this.elements.confirmBtn().click({ force: true });
+      await this.elements.confirmDialog().waitFor({ state: 'visible', timeout: 10000 });
+      await this.elements.confirmBtn().dispatchEvent('click');
       await this.page.waitForTimeout(500);
     } catch {
       // No confirmation dialog appeared — player was not in another group

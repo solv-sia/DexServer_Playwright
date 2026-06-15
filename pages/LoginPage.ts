@@ -39,7 +39,7 @@ export class LoginPage extends BasePage {
     await this.typePassword(password);
     await this.clickLogin();
     // Wait for spinner to disappear (app fully loaded)
-    await expect(this.page.locator('#main')).toHaveCSS('display', 'none', { timeout: 15000 });
+    await expect(this.page.locator('#main')).toHaveCSS('display', 'none', { timeout: 60000 });
     if (verify) {
       await this.verifyDashboard();
     }

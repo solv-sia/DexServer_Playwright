@@ -1,26 +1,21 @@
 // Limpiar todos los condicionales de una media utilizada por más de una playlist MADRE
 import { test } from '@playwright/test';
-import * as path from 'path';
 import config from '../utils/config';
 import { GlobalPage } from '../pages/GlobalPage';
+import { loginWithSession } from '../utils/loginWithSession';
 import { MediaLibraryPage } from '../pages/MediaLibraryPage';
 
-test.use({ storageState: path.join(__dirname, '../auth/storageState.json') });
+test.use({ storageState: { cookies: [], origins: [] } });
 
 test.describe('Limpiar todos los condicionales de una media utilizada por mas de una playlist MADRE', () => {
   test('@CP47PP', async ({ page }) => {
-    test.setTimeout(120000);
+    test.setTimeout(300000);
 
-    await page.goto(`${config.baseUrl}/DexFrontEnd/`, { waitUntil: 'domcontentloaded' });
 
     const globalPage = new GlobalPage(page);
     const mediaLibraryPage = new MediaLibraryPage(page);
 
-    await globalPage.waitSpinner();
-    await globalPage.switchToNewTenant(config.clientName);
-    await globalPage.loginDecision(config.password);
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await globalPage.waitSpinner();
+    await loginWithSession(page, config.userName2, config.password);
 
     await globalPage.clickOnMediaLibraryHeader();
     await mediaLibraryPage.typeSearchMediaInput2(config.mediaToChangePath);

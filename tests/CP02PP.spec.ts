@@ -1,26 +1,25 @@
 // Crear cliente y activarlo
 // El nombre del cliente es guardado en sharedData para ser consumido por CP04PP y CP05PP
 import { test } from '@playwright/test';
-import * as path from 'path';
 import config from '../utils/config';
 import dateFormatter from '../utils/dateFormatter';
 import { setSharedData } from '../utils/sharedData';
 import { GlobalPage } from '../pages/GlobalPage';
+import { loginWithSession } from '../utils/loginWithSession';
 import { CustomerPage } from '../pages/CustomerPage';
 
-test.use({ storageState: path.join(__dirname, '../auth/storageState.json') });
+test.use({ storageState: { cookies: [], origins: [] } });
 
 test.describe('Crear cliente y activarlo', () => {
   test('@CP02PP', async ({ page }) => {
     const fechaFormateada = dateFormatter.datetime();
     const customerName = 'nuevo cliente ' + fechaFormateada;
 
-    await page.goto(`${config.baseUrl}/DexFrontEnd/`, { waitUntil: 'domcontentloaded' });
 
     const globalPage = new GlobalPage(page);
     const customerPage = new CustomerPage(page);
 
-    await globalPage.waitSpinner();
+    await loginWithSession(page, config.userName, config.password);
     await globalPage.clickMenuSetting();
     await globalPage.clickOptionCustomer();
 

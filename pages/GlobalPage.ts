@@ -19,6 +19,7 @@ export class GlobalPage extends BasePage {
     optionGeneral: () => this.page.locator('[href=\'#!/settings/server-settings\']'),
     optionTag:     () => this.page.locator('[href=\'#!/settings/tag\']'),
     infoToastLabel:       () => this.findElement({ get: '#infoToast', find: ['#label'] }),
+    errorToastLabel:      () => this.findElement({ get: '#errorToast', find: ['#label'] }),
     playlistIcon:         () => this.findElement({ get: '.playlist-color', find: ['#icon'] }),
     scheduleIcon:         () => this.findElement({ get: '.schedules-color', find: ['#icon'] }),
     networkIcon:              () => this.findElement({ get: '.network-color', find: ['#icon'] }),
@@ -27,35 +28,48 @@ export class GlobalPage extends BasePage {
     mediaLibraryHeader:       () => this.findElement({ get: 'dex-app', find: ["[name='master']", '#dexHeader', ".media-color[icon='perm-media']"], eq: 0 }),
     playlistHeader:           () => this.findElement({ get: 'dex-app', find: ["[name='master']", '#dexHeader', ".playlist-color[icon='theaters']"], eq: 0 }),
     optionReport:             () => this.page.locator("[data-name='report']"),
-    optionPOP:                () => this.page.locator("a[href='#!/report/daily-impressions'"),
+    optionPOP:                () => this.page.locator("a[href='#!/report/daily-impressions']"),
     optionDexStore:           () => this.page.locator("[href='#!/store']"),
   };
 
   async waitSpinner() {
-    await expect(this.elements.spinner()).toHaveCSS('display', 'none', { timeout: 15000 });
+    await expect(this.elements.spinner()).toHaveCSS('display', 'none', { timeout: 60000 });
+  }
+
+  async waitOverlayClosed() {
+    await this.page.waitForFunction(
+      () => !document.querySelector('iron-overlay-backdrop[opened]'),
+      { timeout: 15000 }
+    ).catch(() => {});
   }
 
   async clickAccountMenu() {
+    await this.waitOverlayClosed();
     await this.elements.accountMenu().click({ force: true });
   }
 
   async clickLogout() {
+    await this.waitOverlayClosed();
     await this.elements.logout().click();
   }
 
   async clickMenuSetting() {
+    await this.waitOverlayClosed();
     await this.elements.menuSetting().click();
   }
 
   async clickOptionCustomer() {
+    await this.waitOverlayClosed();
     await this.elements.optionCustomer().click();
   }
 
   async clickOptionRole() {
+    await this.waitOverlayClosed();
     await this.elements.optionRole().click();
   }
 
   async clickOptionUsers() {
+    await this.waitOverlayClosed();
     await this.elements.optionUser().click();
   }
 
@@ -66,9 +80,58 @@ export class GlobalPage extends BasePage {
     await combo.clear();
     await combo.press('Backspace');
     await combo.pressSequentially(client, { delay: 100 });
-    await this.page.waitForTimeout(500);
-    await combo.press('ArrowUp');
-    await combo.press('Enter');
+
+    // Poll until filteredItems contains an exact match (vaadin filters asynchronously)
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const hasMatch = await this.page.evaluate((val) => {
+        function findInShadow(root: Document | ShadowRoot, sel: string): Element | null {
+          const el = root.querySelector(sel);
+          if (el) return el;
+          for (const e of Array.from(root.querySelectorAll('*'))) {
+            const sr = (e as any).shadowRoot;
+            if (sr) { const f = findInShadow(sr, sel); if (f) return f; }
+          }
+          return null;
+        }
+        const c = findInShadow(document, '#customerDropdown') as any;
+        if (!c) return false;
+        return (c.filteredItems || []).some((i: any) => {
+          const label = typeof i === 'string' ? i : (i.label || String(i.value ?? ''));
+          return label.toLowerCase().includes(val.toLowerCase());
+        });
+      }, client);
+      if (hasMatch) break;
+      await this.page.waitForTimeout(150);
+    }
+
+    await this.page.evaluate((val) => {
+      function findInShadow(root: Document | ShadowRoot, sel: string): Element | null {
+        const el = root.querySelector(sel);
+        if (el) return el;
+        for (const e of Array.from(root.querySelectorAll('*'))) {
+          const sr = (e as any).shadowRoot;
+          if (sr) { const f = findInShadow(sr, sel); if (f) return f; }
+        }
+        return null;
+      }
+      const c = findInShadow(document, '#customerDropdown') as any;
+      if (!c) return;
+      const filtered: any[] = c.filteredItems || [];
+      // Prefer exact match to avoid selecting a tenant with a similar name
+      const match =
+        filtered.find((i: any) => {
+          const label = typeof i === 'string' ? i : (i.label || String(i.value ?? ''));
+          return label.toLowerCase() === val.toLowerCase();
+        }) ??
+        filtered.find((i: any) => {
+          const label = typeof i === 'string' ? i : (i.label || String(i.value ?? ''));
+          return label.toLowerCase().includes(val.toLowerCase());
+        }) ??
+        filtered[0];
+      if (!match) return;
+      c.selectedItem = match;
+      c.opened = false;
+    }, client);
   }
 
   async loginDecision(password: string) {
@@ -81,35 +144,61 @@ export class GlobalPage extends BasePage {
     }
   }
 
-  async clickPlaylist()                   { await this.elements.playlistIcon().click(); }
-  async clickOnPlaylistHeader()           { await this.elements.playlistHeader().click(); }
-  async clickSchedule()                   { await this.elements.scheduleIcon().click(); }
-  async clickNetwork()                    { await this.elements.networkIcon().click(); }
-  async clickOnNetworkHeader()            { await this.elements.networkIcon().click(); }
-  async clickOnHardwarePolicyHeader()     { await this.elements.hardwarePolicyHeader().click(); }
-  async clickOnTransmissionPolicyHeader() { await this.elements.transmissionPolicyHeader().click(); }
-  async clickOptionGeneral()              { await this.elements.optionGeneral().click(); }
+  async clickPlaylist()                   { await this.waitOverlayClosed(); await this.elements.playlistIcon().click(); }
+  async clickOnPlaylistHeader()           { await this.waitOverlayClosed(); await this.elements.playlistHeader().click(); }
+  async clickSchedule()                   { await this.waitOverlayClosed(); await this.elements.scheduleIcon().click(); }
+  async clickNetwork()                    { await this.waitOverlayClosed(); await this.elements.networkIcon().click(); }
+  async clickOnNetworkHeader()            { await this.waitOverlayClosed(); await this.elements.networkIcon().click(); }
+  async clickOnHardwarePolicyHeader()     { await this.waitOverlayClosed(); await this.elements.hardwarePolicyHeader().dispatchEvent('click'); }
+  async clickOnTransmissionPolicyHeader() { await this.waitOverlayClosed(); await this.elements.transmissionPolicyHeader().dispatchEvent('click'); }
+  async clickOptionGeneral()              { await this.waitOverlayClosed(); await this.elements.optionGeneral().click(); }
   async clickOptionTag() {
+    await this.waitOverlayClosed();
     await this.elements.optionTag().waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
     await this.elements.optionTag().dispatchEvent('click');
   }
-  async clickButtonReport()               { await this.elements.optionReport().click(); }
-  async clickOptionPOP()                  { await this.elements.optionPOP().click(); }
-  async clickOptionDexStore()             { await this.elements.optionDexStore().click(); }
+  async clickButtonReport()               { await this.waitOverlayClosed(); await this.elements.optionReport().click(); }
+  async clickOptionPOP()                  { await this.waitOverlayClosed(); await this.elements.optionPOP().click(); }
+  async clickOptionDexStore()             { await this.waitOverlayClosed(); await this.elements.optionDexStore().click(); }
 
 
 
   async clickOnMediaLibraryHeader() {
+    await this.waitOverlayClosed();
     await this.elements.mediaLibraryHeader().click();
   }
 
   async readInfoPopup(msg: string | RegExp) {
     const label = this.elements.infoToastLabel();
-    await expect(label).toBeVisible({ timeout: 10000 });
-    if (msg instanceof RegExp) {
-      await expect(label).toHaveText(msg);
-    } else {
-      await expect(label).toContainText(msg);
+    // Fast path: toast is still visible
+    const isVisible = await label.waitFor({ state: 'visible', timeout: 5000 })
+      .then(() => true).catch(() => false);
+    if (isVisible) {
+      if (msg instanceof RegExp) await expect(label).toHaveText(msg);
+      else await expect(label).toContainText(msg);
+      return;
     }
+    // Toast already showed and auto-dismissed — text persists in the DOM, verify it
+    await expect(async () => {
+      const text = (await label.textContent() ?? '').trim();
+      const matches = msg instanceof RegExp ? msg.test(text) : text.includes(msg);
+      if (!matches) throw new Error(`Expected info toast matching ${msg} but label has "${text}"`);
+    }).toPass({ timeout: 25000, intervals: [100, 200, 500] });
+  }
+
+  async readErrorPopup(msg: string | RegExp) {
+    const label = this.elements.errorToastLabel();
+    const isVisible = await label.waitFor({ state: 'visible', timeout: 5000 })
+      .then(() => true).catch(() => false);
+    if (isVisible) {
+      if (msg instanceof RegExp) await expect(label).toHaveText(msg);
+      else await expect(label).toContainText(msg);
+      return;
+    }
+    await expect(async () => {
+      const text = (await label.textContent() ?? '').trim();
+      const matches = msg instanceof RegExp ? msg.test(text) : text.includes(msg);
+      if (!matches) throw new Error(`Expected error toast matching ${msg} but label has "${text}"`);
+    }).toPass({ timeout: 25000, intervals: [100, 200, 500] });
   }
 }

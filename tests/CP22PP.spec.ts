@@ -1,75 +1,86 @@
-// Downgrade y upgrade de versión de player (CP11PP player)
-import { test } from '@playwright/test';
-import * as path from 'path';
+// Crear player, cambiar versión (downgrade y upgrade), verificar via HB API
+import { test, expect } from '@playwright/test';
 import config from '../utils/config';
 import { GlobalPage } from '../pages/GlobalPage';
+import { loginWithSession } from '../utils/loginWithSession';
 import { NetworkPage } from '../pages/NetworkPage';
 import { NetworkDetailPage } from '../pages/NetworkDetailPage';
+import { createPlayer, deletePlayer } from '../utils/automationApi';
 
-test.use({ storageState: path.join(__dirname, '../auth/storageState.json') });
+test.use({ storageState: { cookies: [], origins: [] } });
 
 test.describe('Actualizar la version de los players (probar downgrade y upgrade)', () => {
+  const cleanupIds: number[] = [];
+
+  test.afterAll(async () => {
+    for (const id of cleanupIds) await deletePlayer(id).catch(() => {});
+  });
+
   test('@CP22PP', async ({ page }) => {
     test.setTimeout(300000);
 
-    await page.goto(`${config.baseUrl}/DexFrontEnd/`, { waitUntil: 'domcontentloaded' });
+    const player = await createPlayer(config.tenantActivationKeyCP16PP, config.playerCP22PP);
+    cleanupIds.push(player.machineId);
 
     const globalPage = new GlobalPage(page);
     const networkPage = new NetworkPage(page);
     const networkDetailPage = new NetworkDetailPage(page);
 
-    await globalPage.waitSpinner();
-    await globalPage.switchToNewTenant(config.clientName);
-    await globalPage.loginDecision(config.password);
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await globalPage.waitSpinner();
+    await loginWithSession(page, config.userName2, config.password);
 
     await globalPage.clickNetwork();
-    await networkPage.clearAndSearch(config.playerCP11PP);
-    await page.waitForTimeout(2000);
+    await globalPage.waitSpinner();
+    await networkPage.clearAndSearch(player.machineName);
+     await page.waitForTimeout(3000);
     await networkPage.clickResultingPlayer();
-    await page.waitForTimeout(2000);
 
-    const currentVersion = await networkDetailPage.getCurrentVersion();
-    const previousVersion = config.previousVersion.trim();
-    const latestVersion = config.latestVersion.trim();
-    const maxRetries = 8;
+    const hbUrl = `${config.baseUrl}/DexFrontend/api/v3/heartBeatSync/${player.machineId}/${player.messageKey}`;
 
-    let firstVersion: string;
-    let secondVersion: string;
-
-    if (currentVersion.trim() === latestVersion) {
-      firstVersion = previousVersion;
-      secondVersion = latestVersion;
-    } else if (currentVersion.trim() === previousVersion) {
-      firstVersion = latestVersion;
-      secondVersion = previousVersion;
-    } else {
-      firstVersion = previousVersion;
-      secondVersion = latestVersion;
-    }
-
-    const setAndVerifyVersion = async (targetVersion: string) => {
+    const setVersionAndVerifyHB = async (targetVersion: string) => {
       const versionInput = networkDetailPage['elements'].versionInput();
       await versionInput.fill(targetVersion, { force: true });
       await versionInput.press('ArrowDown');
       await versionInput.press('Enter');
       await networkDetailPage.clickSave();
       await globalPage.readInfoPopup(/Player guardado|Player saved/i);
+      await page.waitForTimeout(5000);
 
-      for (let i = 0; i < maxRetries; i++) {
-        const ver = await networkDetailPage.getCurrentVersion();
-        if (ver.trim() === targetVersion) break;
-        await page.waitForTimeout(15000);
-        await page.reload({ waitUntil: 'domcontentloaded' });
-        await globalPage.waitSpinner();
-        await page.waitForTimeout(15000);
+      let latestVersion = '';
+      let lastHbData: Record<string, unknown> = {};
+
+      for (let i = 0; i < 10; i++) {
+        const hbData: Record<string, unknown> = await page.evaluate(async (url) => {
+          const res = await fetch(url, { method: 'POST' });
+          return res.json();
+        }, hbUrl);
+
+        lastHbData = hbData;
+        latestVersion = String(hbData['LatestVersion'] ?? '');
+        if (latestVersion === targetVersion) break;
+        await page.waitForTimeout(3000);
       }
+
+      expect(
+        latestVersion,
+        `HB LatestVersion should be ${targetVersion}. Full response: ${JSON.stringify(lastHbData)}`
+      ).toBe(targetVersion);
     };
 
-    await setAndVerifyVersion(firstVersion);
-    await setAndVerifyVersion(secondVersion);
+    const initialHb: Record<string, unknown> = await page.evaluate(async (url) => {
+      const res = await fetch(url, { method: 'POST' });
+      return res.json();
+    }, hbUrl);
+    const currentVersion = String(initialHb['LatestVersion'] ?? '');
 
-    await page.screenshot({ path: 'screenshots/cp22pp.png' });
+    // Always start with whichever version differs from the current one
+    const [firstVersion, secondVersion] = currentVersion === config.previousVersion
+      ? [config.latestVersion, config.previousVersion]
+      : [config.previousVersion, config.latestVersion];
+
+    await setVersionAndVerifyHB(firstVersion);
+    await page.screenshot({ path: 'screenshots/cp22pp_step1.png' });
+
+    await setVersionAndVerifyHB(secondVersion);
+    await page.screenshot({ path: 'screenshots/cp22pp_step2.png' });
   });
 });

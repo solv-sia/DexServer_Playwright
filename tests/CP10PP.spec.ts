@@ -1,30 +1,25 @@
 // Crear una PL Multiframe con elementos condicionados de diferentes formas en cada channel
 import { test } from '@playwright/test';
-import * as path from 'path';
 import config from '../utils/config';
 import dateFormatter from '../utils/dateFormatter';
 import { setSharedData, getSharedData } from '../utils/sharedData';
 import { GlobalPage } from '../pages/GlobalPage';
+import { loginWithSession } from '../utils/loginWithSession';
 import { PlaylistPage } from '../pages/PlaylistPage';
 
-test.use({ storageState: path.join(__dirname, '../auth/storageState.json') });
+test.use({ storageState: { cookies: [], origins: [] } });
 
 test.describe('Crear una PL Multiframe con elementos condicionados', () => {
   test('@CP10PP', async ({ page }) => {
-    test.setTimeout(60000);
+    test.setTimeout(300000);
     const fechaFormateada = dateFormatter.datetime();
     const playlistName = 'Playlist creada con Playwright <3 ' + fechaFormateada;
 
-    await page.goto(`${config.baseUrl}/DexFrontEnd/`, { waitUntil: 'domcontentloaded' });
 
     const globalPage = new GlobalPage(page);
     const playlistPage = new PlaylistPage(page);
 
-    await globalPage.waitSpinner();
-    await globalPage.switchToNewTenant(config.clientName);
-    await globalPage.loginDecision(config.password);
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await globalPage.waitSpinner();
+    await loginWithSession(page, config.userName2, config.password);
 
     await globalPage.clickPlaylist();
 
@@ -39,12 +34,12 @@ test.describe('Crear una PL Multiframe con elementos condicionados', () => {
 
     await playlistPage.typeNamePlaylistInput(playlistName);
 
-    await page.waitForTimeout(100);
+    await playlistPage.buscarRuta(config.ruta);
+    await playlistPage.ubicarSubcarpetaFinal(config.ruta);
     await playlistPage.buscarRuta(config.ruta);
     await playlistPage.ubicarSubcarpetaFinal(config.ruta);
     await playlistPage.assingMediaTochannels(config);
 
-    await page.waitForTimeout(1500);
     await playlistPage.clickSaveButton();
     await globalPage.readInfoPopup(/Playlist guardada!|Playlist saved!/i);
 

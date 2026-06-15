@@ -2,13 +2,14 @@
 // IMPORTANTE: los archivos deben estar en la carpeta fixtures/ del proyecto:
 //   fixtures/VIDEO_MCD.mp4, fixtures/IMG_MCD.jpg, fixtures/TPL MCD.wgt, fixtures/JSON MCD.json
 import { test } from '@playwright/test';
-import * as path from 'path';
 import config from '../utils/config';
 import dateFormatter from '../utils/dateFormatter';
 import { GlobalPage } from '../pages/GlobalPage';
+import { loginWithSession } from '../utils/loginWithSession';
 import { MediaLibraryPage } from '../pages/MediaLibraryPage';
 
-test.use({ storageState: path.join(__dirname, '../auth/storageState.json') });
+
+test.use({ storageState: { cookies: [], origins: [] } });
 
 test.describe('Upload File', () => {
   test('@CP08PP Upload media', async ({ page }) => {
@@ -16,17 +17,14 @@ test.describe('Upload File', () => {
     const fechaFormateada = dateFormatter.datetime(true);
     const folderName = config.uploadFolderName + ' ' + fechaFormateada;
 
-    await page.goto(`${config.baseUrl}/DexFrontEnd/`, { waitUntil: 'domcontentloaded' });
+   
 
     const globalPage = new GlobalPage(page);
     const mediaLibraryPage = new MediaLibraryPage(page);
 
-    await globalPage.waitSpinner();
-    await globalPage.switchToNewTenant(config.clientName);
-    await globalPage.loginDecision(config.password);
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await globalPage.waitSpinner();
-
+    await loginWithSession(page, config.userName2, config.password);
+    await page.waitForTimeout(3000);
+    
     await globalPage.clickOnMediaLibraryHeader();
 
     await mediaLibraryPage.typeSearchMediaInput2(config.fileUploadPath);
@@ -40,7 +38,6 @@ test.describe('Upload File', () => {
     // Video
     await mediaLibraryPage.dropFile(config.fileName1);
     await page.screenshot({ path: 'screenshots/cp08pp-video-upload.png' });
-    await page.waitForTimeout(1000);
     await mediaLibraryPage.clickOnMedia(config.fileName1);
     await page.screenshot({ path: 'screenshots/cp08pp-video-detail.png' });
     await mediaLibraryPage.checkMediaFormat(config.expectedVideoFormat);
@@ -51,7 +48,6 @@ test.describe('Upload File', () => {
     // Image
     await mediaLibraryPage.dropFile(config.fileName2);
     await page.screenshot({ path: 'screenshots/cp08pp-image-upload.png' });
-    await page.waitForTimeout(1000);
     await mediaLibraryPage.clickOnMedia(config.fileName2);
     await page.screenshot({ path: 'screenshots/cp08pp-image-detail.png' });
     await mediaLibraryPage.checkMediaFormat(config.expectedImageFormat);
@@ -62,7 +58,6 @@ test.describe('Upload File', () => {
     // Template (.wgt)
     await mediaLibraryPage.dropFile(config.fileName3);
     await page.screenshot({ path: 'screenshots/cp08pp-template-upload.png' });
-    await page.waitForTimeout(1000);
     await mediaLibraryPage.clickOnMedia(config.fileName3);
     await page.screenshot({ path: 'screenshots/cp08pp-template-detail.png' });
     await mediaLibraryPage.clickCloseBtn();
@@ -70,7 +65,6 @@ test.describe('Upload File', () => {
     // JSON
     await mediaLibraryPage.dropFile(config.fileName4);
     await page.screenshot({ path: 'screenshots/cp08pp-json-upload.png' });
-    await page.waitForTimeout(1000);
     await mediaLibraryPage.clickOnMedia(config.fileName4);
     await page.screenshot({ path: 'screenshots/cp08pp-json-detail.png' });
   });

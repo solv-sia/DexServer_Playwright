@@ -15,7 +15,7 @@ export class SchedulePage extends BasePage {
     everyDaysCheckbox:   () => this.page.locator('#dialogAddEditPeriod paper-checkbox').first(),
     playlistPeriodInput: () => this.page.locator('#playlistMenu input[role="combobox"]'),
     scheduleSearchInput: () => this.findElement({ get: 'dex-schedules-view', find: ['paper-input.search-input', 'input'] }),
-    resultingSchedule:   () => this.findElement({ get: '#dexScheduleList', find: ["div[slot='row']"], eq: 0 }),
+    resultingSchedule:   () => this.page.locator("div[slot='row'].schedule-row").first(),
     deleteScheduleBtn:   () => this.page.locator('#dexScheduleDetail paper-icon-button[icon="delete"]'),
     confirmDeleteBtn:    () => this.page.locator('#dialogDeleteSchedule paper-button[role="button"]').filter({ hasText: /Aceptar|Accept/i }),
     playlistAnalyzerBtn: () => this.page.locator("#dexScheduleDetail paper-icon-button[icon='av:subscriptions']"),
@@ -69,7 +69,7 @@ export class SchedulePage extends BasePage {
     await this.elements.scheduleSearchInput().press('Enter');
   }
 
-  async clickPlaylistAnalyzerBtn() { await this.elements.playlistAnalyzerBtn().click(); }
+  async clickPlaylistAnalyzerBtn() { await this.elements.playlistAnalyzerBtn().click({ force: true }); }
 
   async deleteSchedule(scheduleName: string) {
     await this.searchSchedule(scheduleName);

@@ -1,13 +1,13 @@
 // Dar de alta un usuario NO owner y asignarle el nuevo rol
 import { test } from '@playwright/test';
-import * as path from 'path';
 import info from '../utils/config';
+import { loginWithSession } from '../utils/loginWithSession';
 import dateFormatter from '../utils/dateFormatter';
 import { setSharedData, getSharedData } from '../utils/sharedData';
 import { GlobalPage } from '../pages/GlobalPage';
 import { UserPage } from '../pages/UserPage';
 
-test.use({ storageState: path.join(__dirname, '../auth/storageState.json') });
+test.use({ storageState: { cookies: [], origins: [] } });
 
 test.describe('Dar de alta un usuario y asignarle el nuevo rol', () => {
   test('@CP06PP', async ({ page }) => {
@@ -17,16 +17,11 @@ test.describe('Dar de alta un usuario y asignarle el nuevo rol', () => {
     const customerName = getSharedData('customerCP02PP');
     if (!customerName) throw new Error('customerCP02PP not found in shared data. Run CP02PP first.');
 
-    await page.goto(`${info.baseUrl}/DexFrontEnd/`, { waitUntil: 'domcontentloaded' });
 
     const globalPage = new GlobalPage(page);
     const userPage = new UserPage(page);
 
-    await globalPage.waitSpinner();
-    await globalPage.switchToNewTenant(customerName);
-    await globalPage.loginDecision(info.password);
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await globalPage.waitSpinner();
+    await loginWithSession(page, info.userName, info.password, customerName);
 
     await globalPage.clickMenuSetting();
     await globalPage.clickOptionUsers();

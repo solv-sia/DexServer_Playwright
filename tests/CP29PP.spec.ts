@@ -1,24 +1,37 @@
 // Crear política de hardware y asignarla al grupo validando herencia
 import { test } from '@playwright/test';
-import * as path from 'path';
 import config from '../utils/config';
 import dateFormatter from '../utils/dateFormatter';
 import { setSharedData } from '../utils/sharedData';
 import { GlobalPage } from '../pages/GlobalPage';
+import { loginWithSession } from '../utils/loginWithSession';
 import { NetworkPage } from '../pages/NetworkPage';
 import { NetworkDetailPage } from '../pages/NetworkDetailPage';
 import { GroupDetailPage } from '../pages/GroupDetailPage';
 import { HardwarePolicyPage } from '../pages/HardwarePolicyPage';
+import { createPlayer, deletePlayer } from '../utils/automationApi';
 
-test.use({ storageState: path.join(__dirname, '../auth/storageState.json') });
-
-const hardwarePolicyName = 'HW Policy ' + dateFormatter.datetime();
+test.use({ storageState: { cookies: [], origins: [] } });
 
 test.describe('Create HW Policy', () => {
-  test('@CP29PP', async ({ page }) => {
-    test.setTimeout(90000);
+  const cleanupIds: number[] = [];
 
-    await page.goto(`${config.baseUrl}/DexFrontEnd/`, { waitUntil: 'domcontentloaded' });
+  test.afterAll(async () => {
+    for (const id of cleanupIds) await deletePlayer(id).catch(() => {});
+  });
+
+  test('@CP29PP', async ({ page }) => {
+    test.setTimeout(300000);
+
+    const hardwarePolicyName = 'HW Policy ' + dateFormatter.datetime();
+    const syncGroupName = 'Grupo Sincronizado Automation ' + dateFormatter.datetime();
+
+    const [player1, player2] = await Promise.all([
+      createPlayer(config.tenantActivationKeyCP16PP, config.playerCP29PP1),
+      createPlayer(config.tenantActivationKeyCP16PP, config.playerCP29PP2),
+    ]);
+    cleanupIds.push(player1.machineId, player2.machineId);
+
 
     const globalPage = new GlobalPage(page);
     const networkPage = new NetworkPage(page);
@@ -26,16 +39,34 @@ test.describe('Create HW Policy', () => {
     const groupDetailPage = new GroupDetailPage(page);
     const hwPolicyPage = new HardwarePolicyPage(page);
 
-    await globalPage.waitSpinner();
-    await globalPage.switchToNewTenant(config.clientName);
-    await globalPage.loginDecision(config.password);
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await globalPage.waitSpinner();
+    await loginWithSession(page, config.userName2, config.password);
 
+    // Crear sync group con los players recién creados
+    await globalPage.clickNetwork();
+    await globalPage.waitSpinner();
+    await networkPage.clickMoreBtn();
+    await networkPage.clickSyncGroupBtn();
+    await groupDetailPage.completeGroupNameInput(syncGroupName);
+    await groupDetailPage.completePlaylistSelect(config.syncPlaylistName);
+    await groupDetailPage.completeScheduleSelect(config.syncScheduleName);
+    await groupDetailPage.completeTransmissionPolicySelect(config.syncTransmissionPolicyName);
+    await groupDetailPage.completeHardwarePolicySelect(config.syncHardwarePolicyName);
+    await groupDetailPage.completeIpMulticastInput1(config.ipMulticast1);
+    await groupDetailPage.completeIpMulticastInput2(config.ipMulticast2);
+    await groupDetailPage.completeIpMulticastInput3(config.ipMulticast3);
+    await groupDetailPage.completeSynchronizationSelect(config.synchronizationTime);
+    await groupDetailPage.completeChannelOneSelect(player1.machineName);
+    await groupDetailPage.decisionConfirmPlayer();
+    await groupDetailPage.completeChannelTwoSelect(player2.machineName);
+    await groupDetailPage.decisionConfirmPlayer();
+    await groupDetailPage.clickSaveGroupBtn();
+
+    // Crear política de hardware
     await globalPage.clickOnNetworkHeader();
     await globalPage.waitSpinner();
     await globalPage.clickOnHardwarePolicyHeader();
-
+    await page.waitForTimeout(5000);
+    
     await hwPolicyPage.clickOnCreateHardwarePolicy();
     await hwPolicyPage.nameHardwarePolicy(hardwarePolicyName);
     await hwPolicyPage.setRebootTime(config.rebootTime);
@@ -45,24 +76,26 @@ test.describe('Create HW Policy', () => {
 
     await globalPage.readInfoPopup(/Política guardada!|Policy saved/i);
     await page.screenshot({ path: 'screenshots/cp29pp_policy.png' });
-    await page.waitForTimeout(1000);
 
+    // Asignar política al grupo
     await globalPage.clickNetwork();
-    await networkPage.clearAndSearch(config.player1);
+    await networkPage.clearAndSearch(syncGroupName);
     await networkPage.clickResultingGroup();
     await groupDetailPage.completeHardwarePolicySelect(hardwarePolicyName);
     await groupDetailPage.clickSaveGroupBtn();
     await page.screenshot({ path: 'screenshots/cp29pp_group.png' });
-    await page.waitForTimeout(2000);
 
-    await networkPage.clearAndSearch(config.player1);
+    // Validar herencia en player1
+    await globalPage.clickNetwork();
+    await globalPage.waitSpinner();
+    await networkPage.clearAndSearch(player1.machineName);
     await networkPage.clickResultingPlayer();
     await networkDetailPage.validateInheritedValues({ hardwarePolicyName });
     await page.screenshot({ path: 'screenshots/cp29pp_player1.png' });
-    await page.waitForTimeout(1000);
 
+    // Validar herencia en player2
     await globalPage.clickNetwork();
-    await networkPage.clearAndSearch(config.player2);
+    await networkPage.clearAndSearch(player2.machineName);
     await networkPage.clickResultingPlayer();
     await networkDetailPage.validateInheritedValues({ hardwarePolicyName });
     await page.screenshot({ path: 'screenshots/cp29pp_player2.png' });

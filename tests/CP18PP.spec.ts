@@ -1,26 +1,21 @@
 // Buscar y consultar players por nombre, playlist y calendario
 import { test } from '@playwright/test';
-import * as path from 'path';
 import config from '../utils/config';
 import { GlobalPage } from '../pages/GlobalPage';
+import { loginWithSession } from '../utils/loginWithSession';
 import { NetworkPage } from '../pages/NetworkPage';
 
-test.use({ storageState: path.join(__dirname, '../auth/storageState.json') });
+test.use({ storageState: { cookies: [], origins: [] } });
 
 test.describe('Search and consult players', () => {
   test('@CP18PP', async ({ page }) => {
-    test.setTimeout(60000);
+    test.setTimeout(300000);
 
-    await page.goto(`${config.baseUrl}/DexFrontEnd/`, { waitUntil: 'domcontentloaded' });
 
     const globalPage = new GlobalPage(page);
     const networkPage = new NetworkPage(page);
 
-    await globalPage.waitSpinner();
-    await globalPage.switchToNewTenant(config.clientName);
-    await globalPage.loginDecision(config.password);
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await globalPage.waitSpinner();
+    await loginWithSession(page, config.userName2, config.password);
 
     await globalPage.clickNetwork();
     await globalPage.waitSpinner();

@@ -37,8 +37,8 @@ export class MediaLibraryPage extends BasePage {
   async findBottomFolder(ruta: string) {
     if (!ruta) return;
     const subfolders = ruta.split('/');
-    for (const folder of subfolders) {
-      // Wait until the folder div appears in shadow DOM, then click it via JS
+    for (let i = 0; i < subfolders.length; i++) {
+      const folder = subfolders[i];
       await this.page.waitForFunction((title: string) => {
         function findInShadow(root: Document | ShadowRoot, sel: string): Element | null {
           const found = root.querySelector(sel);
@@ -66,7 +66,34 @@ export class MediaLibraryPage extends BasePage {
         if (el) el.click();
       }, folder);
 
-      await this.page.waitForTimeout(300);
+      // After clicking, wait for next subfolder or for media cards to appear
+      const nextFolder = subfolders[i + 1];
+      if (nextFolder) {
+        await this.page.waitForFunction((title: string) => {
+          function findInShadow(root: Document | ShadowRoot, sel: string): Element | null {
+            const found = root.querySelector(sel);
+            if (found) return found;
+            for (const el of root.querySelectorAll('*')) {
+              const sr = (el as Element & { shadowRoot?: ShadowRoot }).shadowRoot;
+              if (sr) { const r = findInShadow(sr, sel); if (r) return r; }
+            }
+            return null;
+          }
+          return !!findInShadow(document, `div[title='${title}']`);
+        }, nextFolder, { timeout: 8000 }).catch(() => {});
+      } else {
+        await this.page.waitForFunction(() => {
+          function findAll(root: Document | ShadowRoot, sel: string): Element[] {
+            const results = Array.from(root.querySelectorAll(sel));
+            for (const el of root.querySelectorAll('*')) {
+              const sr = (el as Element & { shadowRoot?: ShadowRoot }).shadowRoot;
+              if (sr) results.push(...findAll(sr, sel));
+            }
+            return results;
+          }
+          return findAll(document, 'dex-media-card[slot="card"]').length > 0;
+        }, { timeout: 8000 }).catch(() => {});
+      }
     }
   }
 
@@ -364,7 +391,95 @@ export class MediaLibraryPage extends BasePage {
   }
 
   async rightClickOnMedia(mediaName: string) {
-    await this.page.evaluate((name: string) => {
+    const card = this.page.locator(`dex-media-card[title="${mediaName}"]`)
+      .or(this.page.locator('dex-media-card').filter({ hasText: mediaName }))
+      .first();
+    await card.waitFor({ state: 'visible', timeout: 15000 });
+    const box = await card.boundingBox();
+    if (!box) throw new Error(`No bounding box for media card: ${mediaName}`);
+    await this.page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await this.page.mouse.click(box.x + box.width / 2, box.y + box.height / 2, { button: 'right' });
+  }
+
+  async clickReplaceMedia() {
+    await this.page.waitForTimeout(200);
+    const clicked = await this.page.evaluate(() => {
+      function findAll(root: Document | ShadowRoot, sel: string): HTMLElement[] {
+        const items = Array.from(root.querySelectorAll(sel)) as HTMLElement[];
+        for (const el of root.querySelectorAll('*')) {
+          const sr = (el as Element & { shadowRoot?: ShadowRoot }).shadowRoot;
+          if (sr) items.push(...findAll(sr, sel));
+        }
+        return items;
+      }
+      for (const sel of ['paper-icon-item', 'paper-item']) {
+        const match = findAll(document, sel).find(el => /reemplazar|replace/i.test(el.textContent ?? ''));
+        if (match) { match.click(); return true; }
+      }
+      return false;
+    });
+    if (!clicked) throw new Error('Reemplazar media menu item not found');
+    await this.page.waitForTimeout(2500);
+  }
+
+  async clickRemoveMedia() {
+    await this.page.waitForTimeout(200);
+    const clicked = await this.page.evaluate(() => {
+      function findAll(root: Document | ShadowRoot, sel: string): HTMLElement[] {
+        const items = Array.from(root.querySelectorAll(sel)) as HTMLElement[];
+        for (const el of root.querySelectorAll('*')) {
+          const sr = (el as Element & { shadowRoot?: ShadowRoot }).shadowRoot;
+          if (sr) items.push(...findAll(sr, sel));
+        }
+        return items;
+      }
+      for (const sel of ['paper-icon-item', 'paper-item']) {
+        const match = findAll(document, sel).find(el => /quitar|remove/i.test(el.textContent ?? ''));
+        if (match) { match.click(); return true; }
+      }
+      return false;
+    });
+    if (!clicked) throw new Error('Quitar media menu item not found');
+    await this.page.waitForTimeout(1500);
+  }
+
+  async searchMediatoReplace2(mediaName: string) {
+    await this.page.evaluate((value: string) => {
+      function findInShadow(root: Document | ShadowRoot, sel: string): HTMLInputElement | null {
+        const found = root.querySelector(sel) as HTMLInputElement | null;
+        if (found) return found;
+        for (const el of root.querySelectorAll('*')) {
+          const sr = (el as Element & { shadowRoot?: ShadowRoot }).shadowRoot;
+          if (sr) { const r = findInShadow(sr, sel); if (r) return r; }
+        }
+        return null;
+      }
+      const input = findInShadow(document, 'input[placeholder="Búsqueda/Filtro"]')
+        ?? findInShadow(document, 'input[placeholder="Search/Filter"]');
+      if (!input) throw new Error('Replace dialog search input not found');
+      input.focus();
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }, mediaName);
+    await this.page.keyboard.press('Enter');
+    await this.page.waitForTimeout(1000);
+  }
+
+  async findFolderForMediaReplace(folderName: string) {
+    await this.page.waitForFunction((title: string) => {
+      function findInShadow(root: Document | ShadowRoot, sel: string): Element | null {
+        const found = root.querySelector(sel);
+        if (found) return found;
+        for (const el of root.querySelectorAll('*')) {
+          const sr = (el as Element & { shadowRoot?: ShadowRoot }).shadowRoot;
+          if (sr) { const r = findInShadow(sr, sel); if (r) return r; }
+        }
+        return null;
+      }
+      return !!findInShadow(document, `div[title='${title}']`);
+    }, folderName, { timeout: 10000 });
+    await this.page.evaluate((title: string) => {
       function findInShadow(root: Document | ShadowRoot, sel: string): HTMLElement | null {
         const found = root.querySelector(sel) as HTMLElement | null;
         if (found) return found;
@@ -374,59 +489,201 @@ export class MediaLibraryPage extends BasePage {
         }
         return null;
       }
-      const card = findInShadow(document, `dex-media-card[slot='card'][title='${name}']`) ??
-                   findInShadow(document, `[title='${name}']`);
-      if (card) card.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
-      else throw new Error(`Media card not found for right-click: ${name}`);
-    }, mediaName);
-  }
-
-  async clickReplaceMedia() {
-    await this.page.locator('paper-item').filter({ hasText: /reemplazar|replace/i }).first().click({ force: true });
-    await this.page.waitForTimeout(2500);
-  }
-
-  async clickRemoveMedia() {
-    await this.page.locator('paper-item').filter({ hasText: /quitar|remove/i }).first().click({ force: true });
-    await this.page.waitForTimeout(1500);
-  }
-
-  async searchMediatoReplace2(mediaName: string) {
-    const input = this.page.locator('#dexMediaReplaceDetail input[placeholder]').first();
-    await input.fill(mediaName, { force: true });
-    await input.press('Enter');
-    await this.page.waitForTimeout(1000);
-  }
-
-  async findFolderForMediaReplace(folderName: string) {
-    await this.page.locator('.folder-item, dex-folder-item').filter({ hasText: folderName }).first().click();
-    await this.page.waitForTimeout(500);
+      const el = findInShadow(document, `div[title='${title}']`);
+      if (el) el.click();
+    }, folderName);
+    await this.page.waitForTimeout(300);
   }
 
   async clickOnReplacementMedia(mediaName: string) {
-    await this.page.locator('dex-media-card').filter({ hasText: mediaName }).first().click();
+    const baseName = mediaName.replace(/\.[^/.]+$/, '');
+    const card = this.page.locator('div.mediaCardC').filter({ hasText: baseName }).first();
+    await card.waitFor({ state: 'visible', timeout: 15000 });
+    await card.click();
   }
 
   async clickContinueBtn() {
-    await this.page.locator('paper-button').filter({ hasText: /continuar|continue/i }).first().click();
+    await this.page.evaluate(() => {
+      function findAll(root: Document | ShadowRoot, sel: string): HTMLElement[] {
+        const items = Array.from(root.querySelectorAll(sel)) as HTMLElement[];
+        for (const el of root.querySelectorAll('*')) {
+          const sr = (el as Element & { shadowRoot?: ShadowRoot }).shadowRoot;
+          if (sr) items.push(...findAll(sr, sel));
+        }
+        return items;
+      }
+      const match = findAll(document, 'paper-button').find(btn => {
+        if (!/continuar|continue|siguiente|next/i.test(btn.textContent ?? '')) return false;
+        const rect = btn.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      });
+      if (match) match.click();
+      else throw new Error('Continue/Next button not found or not visible');
+    });
     await this.page.waitForTimeout(1000);
   }
 
   async clickSecondContinueBtn() {
-    await this.page.locator('paper-button').filter({ hasText: /continuar|continue/i }).nth(1).click();
+    await this.page.evaluate(() => {
+      function findAll(root: Document | ShadowRoot, sel: string): HTMLElement[] {
+        const items = Array.from(root.querySelectorAll(sel)) as HTMLElement[];
+        for (const el of root.querySelectorAll('*')) {
+          const sr = (el as Element & { shadowRoot?: ShadowRoot }).shadowRoot;
+          if (sr) items.push(...findAll(sr, sel));
+        }
+        return items;
+      }
+      const btn = findAll(document, 'paper-button').find(b => {
+        if (!/siguiente|next|continuar|continue/i.test(b.textContent ?? '')) return false;
+        const rect = b.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      });
+      if (btn) btn.click();
+      else throw new Error('Siguiente/Continue button not found or not visible');
+    });
     await this.page.waitForTimeout(1000);
   }
 
   async clickSelectAllCheckBox() {
-    await this.page.locator('paper-checkbox').filter({ hasText: /seleccionar todo|select all/i }).first().click({ force: true });
+    for (let attempt = 0; attempt < 30; attempt++) {
+      const found = await this.page.evaluate(() => {
+        function findAll(root: Document | ShadowRoot, sel: string): HTMLElement[] {
+          const items = Array.from(root.querySelectorAll(sel)) as HTMLElement[];
+          for (const el of root.querySelectorAll('*')) {
+            const sr = (el as Element & { shadowRoot?: ShadowRoot }).shadowRoot;
+            if (sr) items.push(...findAll(sr, sel));
+          }
+          return items;
+        }
+        const match = findAll(document, 'paper-checkbox').find(cb => {
+          if (!/seleccionar todo|select all/i.test(cb.textContent ?? '')) return false;
+          const rect = cb.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        });
+        if (match) { match.click(); return true; }
+        return false;
+      });
+      if (found) return;
+      await this.page.waitForTimeout(300);
+    }
+    throw new Error('Select all checkbox not found after waiting');
   }
 
   async clickPlaylistCheckbox(playlistName: string) {
-    await this.page.locator('paper-checkbox').filter({ hasText: playlistName }).first().click({ force: true });
+    // Type the playlist name into the dialog's search box to filter the list
+    await this.page.evaluate((name: string) => {
+      function findAll(root: Element | Document | ShadowRoot, sel: string): HTMLElement[] {
+        const items = Array.from(root.querySelectorAll(sel)) as HTMLElement[];
+        for (const el of root.querySelectorAll('*')) {
+          const sr = (el as Element & { shadowRoot?: ShadowRoot }).shadowRoot;
+          if (sr) items.push(...findAll(sr, sel));
+        }
+        return items;
+      }
+      const dialogs = Array.from(document.querySelectorAll('paper-dialog'));
+      if (dialogs.length === 0) return;
+      const dlg = dialogs[dialogs.length - 1] as HTMLElement;
+      const inp = findAll(dlg, 'input').find(el => {
+        const r = (el as HTMLElement).getBoundingClientRect();
+        return r.width > 0 && r.height > 0;
+      }) as HTMLInputElement | undefined;
+      if (!inp) return;
+      inp.focus();
+      inp.value = name;
+      inp.dispatchEvent(new Event('input', { bubbles: true }));
+      inp.dispatchEvent(new Event('change', { bubbles: true }));
+    }, playlistName);
+    await this.page.keyboard.press('Enter');
+    await this.page.waitForTimeout(700);
+
+    // Retry: find the checkbox now that the list is filtered
+    let noScrollStreak = 0;
+    for (let attempt = 0; attempt < 30; attempt++) {
+      const result = await this.page.evaluate((name: string) => {
+        function findAll(root: Document | ShadowRoot, sel: string): HTMLElement[] {
+          const items = Array.from(root.querySelectorAll(sel)) as HTMLElement[];
+          for (const el of root.querySelectorAll('*')) {
+            const sr = (el as Element & { shadowRoot?: ShadowRoot }).shadowRoot;
+            if (sr) items.push(...findAll(sr, sel));
+          }
+          return items;
+        }
+
+        function isCheckbox(el: Element): boolean {
+          const tag = el.tagName?.toLowerCase() ?? '';
+          return tag === 'paper-checkbox' || el.getAttribute('role') === 'checkbox' ||
+                 (el as HTMLElement).shadowRoot?.querySelector('input[type="checkbox"]') !== null;
+        }
+
+        function findCheckboxInAncestors(start: Element): HTMLElement | null {
+          let node: Element | null = start;
+          for (let d = 0; d < 6 && node; d++) {
+            const parent: Element | null = node.parentElement ??
+              ((node.getRootNode() as ShadowRoot)?.host as Element | undefined) ?? null;
+            if (!parent) break;
+            const cb = Array.from(parent.children).find(isCheckbox) as HTMLElement | undefined;
+            if (cb) return cb;
+            node = parent;
+          }
+          return null;
+        }
+
+        // Strategy 1: paper-checkbox whose label text matches directly
+        for (const cb of findAll(document, 'paper-checkbox')) {
+          if ((cb.textContent ?? '').trim() === name) { cb.click(); return 'clicked'; }
+        }
+
+        // Strategy 2: text-matching element → walk ancestors to find sibling checkbox
+        for (const el of findAll(document, '*')) {
+          if ((el.textContent ?? '').trim() !== name) continue;
+          const cb = findCheckboxInAncestors(el);
+          if (cb) { cb.click(); return 'clicked'; }
+        }
+
+        // Scroll virtual list to load more rows
+        for (const el of findAll(document, '*')) {
+          const style = window.getComputedStyle(el);
+          if ((style.overflowY === 'auto' || style.overflowY === 'scroll') &&
+              el.scrollHeight > el.clientHeight + 10) {
+            const rect = el.getBoundingClientRect();
+            if (rect.y < 60 || rect.height === 0) continue;
+            (el as HTMLElement).scrollBy(0, 300);
+            return 'scrolled';
+          }
+        }
+        return 'no-scroll';
+      }, playlistName);
+
+      if (result === 'clicked') return;
+      if (result === 'no-scroll') {
+        noScrollStreak++;
+        if (noScrollStreak >= 10) break;
+      } else {
+        noScrollStreak = 0;
+      }
+      await this.page.waitForTimeout(200);
+    }
+    throw new Error(`Playlist checkbox not found after scrolling: ${playlistName}`);
   }
 
   async clickConfirmBtn() {
-    await this.page.locator('paper-button').filter({ hasText: /confirmar|confirm/i }).last().click({ force: true });
+    await this.page.evaluate(() => {
+      function findAll(root: Document | ShadowRoot, sel: string): HTMLElement[] {
+        const items = Array.from(root.querySelectorAll(sel)) as HTMLElement[];
+        for (const el of root.querySelectorAll('*')) {
+          const sr = (el as Element & { shadowRoot?: ShadowRoot }).shadowRoot;
+          if (sr) items.push(...findAll(sr, sel));
+        }
+        return items;
+      }
+      const btn = findAll(document, 'paper-button').find(b => {
+        if (!/confirmar|confirm/i.test(b.textContent ?? '')) return false;
+        const rect = b.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      });
+      if (btn) btn.click();
+      else throw new Error('Confirm button not found or not visible');
+    });
     await this.page.waitForTimeout(600);
   }
 

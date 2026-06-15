@@ -10,7 +10,7 @@ export class HardwarePolicyPage extends BasePage {
   private dialog = () => this.base().locator('#dialogPolicy paper-dialog#dialog');
 
   private elements = {
-    createBtn:       () => this.base().locator('.dex-fab #icon'),
+    createBtn:       () => this.base().locator('.dex-fab'),
     nameInput:       () => this.dialog().locator('paper-input').first().locator('input'),
     rebootInput:     () => this.dialog().locator("paper-input[type='time']").first().locator('input'),
     saveBtn:         () => this.dialog().locator('.buttons paper-button[title="Guardar"]'),
@@ -20,10 +20,14 @@ export class HardwarePolicyPage extends BasePage {
     confirmDeleteBtn:() => this.base().locator('paper-dialog#dialogDelete paper-button[role="button"]').filter({ hasText: /Confirmar|Confirm/i }),
   };
 
-  async clickOnCreateHardwarePolicy() { await this.elements.createBtn().click({ force: true }); }
+  async clickOnCreateHardwarePolicy() {
+    await this.elements.createBtn().waitFor({ state: 'visible', timeout: 30000 });
+    await this.elements.createBtn().dispatchEvent('click');
+  }
 
   async nameHardwarePolicy(name: string) {
-    await this.elements.nameInput().click({ force: true });
+    await this.dialog().waitFor({ state: 'visible', timeout: 20000 });
+    await this.page.waitForTimeout(400);
     await this.elements.nameInput().fill(name, { force: true });
   }
 

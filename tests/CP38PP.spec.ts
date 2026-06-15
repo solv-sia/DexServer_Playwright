@@ -1,68 +1,76 @@
-// Crear una sucursal (store) en DexStore y asignarla al grupo
+// Asignar sucursal a grupo syncro y verificar herencia en player
 import { test } from '@playwright/test';
-import * as path from 'path';
 import config from '../utils/config';
+import dateFormatter from '../utils/dateFormatter';
 import { GlobalPage } from '../pages/GlobalPage';
+import { loginWithSession } from '../utils/loginWithSession';
 import { NetworkPage } from '../pages/NetworkPage';
 import { NetworkDetailPage } from '../pages/NetworkDetailPage';
 import { GroupDetailPage } from '../pages/GroupDetailPage';
-import { DexStorePage } from '../pages/DexStorePage';
+import { createPlayer, deletePlayer } from '../utils/automationApi';
 
-test.use({ storageState: path.join(__dirname, '../auth/storageState.json') });
+test.use({ storageState: { cookies: [], origins: [] } });
 
-test.describe('Create a Store and assign it to the group', () => {
+const syncGroupName = 'Grupo CP38PP ' + dateFormatter.datetime();
+
+test.describe('Assign branch to sync group and verify player inherits it', () => {
+  const cleanupIds: number[] = [];
+
+  test.afterAll(async () => {
+    for (const id of cleanupIds) await deletePlayer(id).catch(() => {});
+  });
+
   test('@CP38PP', async ({ page }) => {
-    test.setTimeout(90000);
+    test.setTimeout(300000);
 
-    await page.goto(`${config.baseUrl}/DexFrontEnd/`, { waitUntil: 'domcontentloaded' });
+    // Precondition: create headless player via API
+    const player = await createPlayer(config.tenantActivationKeyCP14PP, config.playerCP38PP);
+    cleanupIds.push(player.machineId);
 
     const globalPage = new GlobalPage(page);
     const networkPage = new NetworkPage(page);
     const networkDetailPage = new NetworkDetailPage(page);
     const groupDetailPage = new GroupDetailPage(page);
-    const dexStorePage = new DexStorePage(page);
 
-    await globalPage.waitSpinner();
-    await globalPage.switchToNewTenant(config.clientName);
-    await globalPage.loginDecision(config.password);
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await globalPage.waitSpinner();
+    await loginWithSession(page, config.userName2, config.password);
 
-    await globalPage.clickMenuSetting();
-    await globalPage.clickOptionDexStore();
-
-    await dexStorePage.clickStoreTab();
-    await dexStorePage.clickAddBtn();
-    await dexStorePage.typeStoreCode(config.storeCode);
-    await dexStorePage.typeStoreName(config.storeName);
-    await dexStorePage.typeStoreCountry(config.storeCountry);
-    await dexStorePage.typeStoreProvince(config.storeProvince);
-    await dexStorePage.typeStoreLocation(config.storeLocation);
-    await dexStorePage.typeStoreStatus(config.storeStatusInput);
-    await dexStorePage.clickSaveBtn();
-    await page.waitForTimeout(600);
-    await dexStorePage.clickConfirmBtn();
-    await page.waitForTimeout(200);
-    await page.screenshot({ path: 'screenshots/cp38pp_store.png' });
-
-    // Asignar store al grupo
     await globalPage.clickNetwork();
-    await networkPage.clearAndSearch(config.player1);
-    await networkPage.clickResultingGroup();
-    await groupDetailPage.completeStoreSelect(config.completeStoreName);
+    await globalPage.waitSpinner();
+
+    // Create sync group with the new player
+    await networkPage.clickMoreBtn();
+    await networkPage.clickSyncGroupBtn();
+
+    await groupDetailPage.completeGroupNameInput(syncGroupName);
+    await groupDetailPage.completePlaylistSelect(config.syncPlaylistName);
+    await groupDetailPage.completeScheduleSelect(config.syncScheduleName);
+    await groupDetailPage.completeTransmissionPolicySelect(config.syncTransmissionPolicyName);
+    await groupDetailPage.completeHardwarePolicySelect(config.syncHardwarePolicyName);
+    await groupDetailPage.completeIpMulticastInput1(config.ipMulticast1);
+    await groupDetailPage.completeIpMulticastInput2(config.ipMulticast2);
+    await groupDetailPage.completeIpMulticastInput3(config.ipMulticast3);
+    await groupDetailPage.completeSynchronizationSelect(config.synchronizationTime);
+
+    await groupDetailPage.completeChannelOneSelect(player.machineName);
+    await groupDetailPage.decisionConfirmPlayer();
+
+    // Assign the first available store/sucursal from the combo
+    const assignedStore = await groupDetailPage.selectFirstStoreOption();
+
     await groupDetailPage.clickSaveGroupBtn();
+    await page.screenshot({ path: 'screenshots/cp38pp_group.png' });
 
-    // Verificar en player1
-    await networkPage.clearAndSearch(config.player1);
-    await networkPage.clickResultingPlayer();
-    await page.screenshot({ path: 'screenshots/cp38pp_player1.png' });
-    await page.waitForTimeout(1000);
-
-    // Verificar en player2
+    // Navigate to the headless player via the sync group card (player is channel 1 inside it)
     await globalPage.clickNetwork();
-    await networkPage.clearAndSearch(config.player2);
+    await globalPage.waitSpinner();
+    await networkPage.clearAndSearch(syncGroupName);
+    await page.waitForTimeout(2500);
     await networkPage.clickResultingPlayer();
-    await page.screenshot({ path: 'screenshots/cp38pp_player2.png' });
-    await page.waitForTimeout(1000);
+
+    await page.screenshot({ path: 'screenshots/cp38pp_player_detail_before.png' });
+    await networkDetailPage.validateInheritedValues({
+      storeName: assignedStore,
+    });
+    await page.screenshot({ path: 'screenshots/cp38pp_player_inherited_store.png' });
   });
 });

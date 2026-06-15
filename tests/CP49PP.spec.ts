@@ -1,31 +1,26 @@
 // Definir condicionales de fecha/hora en media propagada a 10 playlists y verificar
 import { test, expect } from '@playwright/test';
-import * as path from 'path';
 import config from '../utils/config';
 import { GlobalPage } from '../pages/GlobalPage';
+import { loginWithSession } from '../utils/loginWithSession';
 import { MediaLibraryPage } from '../pages/MediaLibraryPage';
 import { PlaylistPage } from '../pages/PlaylistPage';
 
-test.use({ storageState: path.join(__dirname, '../auth/storageState.json') });
+test.use({ storageState: { cookies: [], origins: [] } });
 
 test.describe('Configurar media y validar cambios de fecha', () => {
   test('@CP49PP', async ({ page }) => {
-    test.setTimeout(180000);
+    test.setTimeout(300000);
 
     const today = new Date();
     const currentDate = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getFullYear()).slice(-2)}`;
 
-    await page.goto(`${config.baseUrl}/DexFrontEnd/`, { waitUntil: 'domcontentloaded' });
 
     const globalPage = new GlobalPage(page);
     const mediaLibraryPage = new MediaLibraryPage(page);
     const playlistPage = new PlaylistPage(page);
 
-    await globalPage.waitSpinner();
-    await globalPage.switchToNewTenant(config.clientName);
-    await globalPage.loginDecision(config.password);
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await globalPage.waitSpinner();
+    await loginWithSession(page, config.userName2, config.password);
 
     await globalPage.clickOnMediaLibraryHeader();
     await mediaLibraryPage.typeSearchMediaInput2(config.mediaToChangePath);

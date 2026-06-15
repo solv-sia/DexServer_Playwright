@@ -1,55 +1,55 @@
-// Solicitar logs y capturas al player (CP11PP player)
+// Solicitar logs y capturas al player y verificar via HB API
 import { test, expect } from '@playwright/test';
-import * as path from 'path';
 import config from '../utils/config';
 import { GlobalPage } from '../pages/GlobalPage';
+import { loginWithSession } from '../utils/loginWithSession';
 import { NetworkPage } from '../pages/NetworkPage';
+import { createPlayer, deletePlayer } from '../utils/automationApi';
 
-test.use({ storageState: path.join(__dirname, '../auth/storageState.json') });
+test.use({ storageState: { cookies: [], origins: [] } });
 
 test.describe('Solicitar logs y capturas al player', () => {
-  test('@CP23PP', async ({ page }) => {
-    test.setTimeout(60000);
+  const cleanupIds: number[] = [];
 
-    await page.goto(`${config.baseUrl}/DexFrontEnd/`, { waitUntil: 'domcontentloaded' });
+  test.afterAll(async () => {
+    for (const id of cleanupIds) await deletePlayer(id).catch(() => { });
+  });
+
+  test('@CP23PP', async ({ page }) => {
+    test.setTimeout(300000);
+
+    const player = await createPlayer(config.tenantActivationKeyCP16PP, config.playerCP23PP);
+    cleanupIds.push(player.machineId);
 
     const globalPage = new GlobalPage(page);
     const networkPage = new NetworkPage(page);
 
-    await globalPage.waitSpinner();
-    await globalPage.switchToNewTenant(config.clientName);
-    await globalPage.loginDecision(config.password);
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await globalPage.waitSpinner();
+    await loginWithSession(page, config.userName2, config.password);
 
     await globalPage.clickNetwork();
-    await networkPage.clearAndSearch(config.player1);
     await globalPage.waitSpinner();
+    await networkPage.clearAndSearch(player.machineName);
+    await page.waitForTimeout(5000);
 
     // Enviar comando de logs
     await networkPage.clickDisplayCheck();
-    await page.waitForTimeout(1000);
     await networkPage.clickBotonera();
-    await page.waitForTimeout(1000);
     await networkPage.clickSendLogCommand();
-    await page.waitForTimeout(1000);
     await networkPage.clickConfirmButton();
     await globalPage.readInfoPopup(/solicitud enviada|request sended/i);
+    await page.waitForTimeout(5000);
+  
 
     // Enviar comando de screenshot
     await networkPage.clickDisplayCheck();
-    await page.waitForTimeout(1000);
     await networkPage.clickBotonera();
-    await page.waitForTimeout(1000);
     await networkPage.clickSendScreenshotCommand();
-    await page.waitForTimeout(1000);
     await networkPage.clickConfirmButton();
     await globalPage.readInfoPopup(/solicitud enviada|request sended/i);
 
     await page.screenshot({ path: 'screenshots/cp23pp.png' });
 
-    // Polling: hace el fetch desde el contexto del browser (misma sesión/cookies)
-    const hbUrl = `${config.baseUrl}/DexFrontend/api/v3/heartBeatSync/${config.machineIdCP23PP}/${config.messageKeyCP23PP}`;
+    const hbUrl = `${config.baseUrl}/DexFrontend/api/v3/heartBeatSync/${player.machineId}/${player.messageKey}`;
     let hasSNDLGS = false;
     let hasSCNSHT = false;
 

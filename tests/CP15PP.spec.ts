@@ -1,31 +1,25 @@
 // Activar DexStore en el tenant creado en CP02PP
 import { test } from '@playwright/test';
-import * as path from 'path';
 import config from '../utils/config';
 import { getSharedData } from '../utils/sharedData';
 import { GlobalPage } from '../pages/GlobalPage';
+import { loginWithSession } from '../utils/loginWithSession';
 import { GeneralPage } from '../pages/GeneralPage';
 
-test.use({ storageState: path.join(__dirname, '../auth/storageState.json') });
+test.use({ storageState: { cookies: [], origins: [] } });
 
 test.describe('Activar Dex Store', () => {
   test('@CP15PP', async ({ page }) => {
-    test.setTimeout(60000);
+    test.setTimeout(300000);
 
-    await page.goto(`${config.baseUrl}/DexFrontEnd/`, { waitUntil: 'domcontentloaded' });
 
     const globalPage = new GlobalPage(page);
     const generalPage = new GeneralPage(page);
 
-    await globalPage.waitSpinner();
-
     const customerName = getSharedData('customerCP02PP');
     if (!customerName) throw new Error('customerCP02PP not found in shared data');
 
-    await globalPage.switchToNewTenant(customerName);
-    await globalPage.loginDecision(config.password);
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await globalPage.waitSpinner();
+    await loginWithSession(page, config.userName2, config.password);
 
     await globalPage.clickMenuSetting();
     await globalPage.clickOptionGeneral();

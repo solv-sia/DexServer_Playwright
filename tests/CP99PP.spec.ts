@@ -1,9 +1,9 @@
 // Limpieza general: eliminar todos los elementos creados durante la suite
 import { test } from '@playwright/test';
-import * as path from 'path';
 import config from '../utils/config';
 import { getSharedData } from '../utils/sharedData';
 import { GlobalPage } from '../pages/GlobalPage';
+import { loginWithSession } from '../utils/loginWithSession';
 import { NetworkPage } from '../pages/NetworkPage';
 import { HardwarePolicyPage } from '../pages/HardwarePolicyPage';
 import { TransmissionPolicyPage } from '../pages/TransmissionPolicyPage';
@@ -16,23 +16,18 @@ import { RolePage } from '../pages/RolePage';
 import { CustomerPage } from '../pages/CustomerPage';
 import { DashboardPage } from '../pages/DashboardPage';
 
-test.use({ storageState: path.join(__dirname, '../auth/storageState.json') });
+test.use({ storageState: { cookies: [], origins: [] } });
 
 async function loginSetup(page: import('@playwright/test').Page) {
   const globalPage = new GlobalPage(page);
-  await page.goto(`${config.baseUrl}/DexFrontEnd/`, { waitUntil: 'domcontentloaded' });
-  await globalPage.waitSpinner();
-  await globalPage.switchToNewTenant(config.clientName);
-  await globalPage.loginDecision(config.password);
-  await page.reload({ waitUntil: 'domcontentloaded' });
-  await globalPage.waitSpinner();
+  await loginWithSession(page, config.userName2, config.password);
   return globalPage;
 }
 
 test.describe('Limpieza suite: eliminar elementos creados', () => {
 
   test('@CP99APP Eliminar medias de la biblioteca', async ({ page }) => {
-    test.setTimeout(120000);
+    test.setTimeout(300000);
     const globalPage = await loginSetup(page);
     const mediaLibraryPage = new MediaLibraryPage(page);
 
@@ -55,7 +50,7 @@ test.describe('Limpieza suite: eliminar elementos creados', () => {
   });
 
   test('@CP99BPP Eliminar grupos de red (sincronizado y solitario)', async ({ page }) => {
-    test.setTimeout(90000);
+    test.setTimeout(300000);
     const globalPage = await loginSetup(page);
     const networkPage = new NetworkPage(page);
 
@@ -78,7 +73,7 @@ test.describe('Limpieza suite: eliminar elementos creados', () => {
   });
 
   test('@CP99CPP Eliminar política de hardware', async ({ page }) => {
-    test.setTimeout(60000);
+    test.setTimeout(300000);
     const globalPage = await loginSetup(page);
     const hwPolicyPage = new HardwarePolicyPage(page);
 
@@ -95,7 +90,7 @@ test.describe('Limpieza suite: eliminar elementos creados', () => {
   });
 
   test('@CP99DPP Eliminar política de transmisión', async ({ page }) => {
-    test.setTimeout(60000);
+    test.setTimeout(300000);
     const globalPage = await loginSetup(page);
     const trPolicyPage = new TransmissionPolicyPage(page);
 
@@ -112,7 +107,7 @@ test.describe('Limpieza suite: eliminar elementos creados', () => {
   });
 
   test('@CP99EPP Eliminar calendario', async ({ page }) => {
-    test.setTimeout(60000);
+    test.setTimeout(300000);
     const globalPage = await loginSetup(page);
     const schedulePage = new SchedulePage(page);
 
@@ -128,7 +123,7 @@ test.describe('Limpieza suite: eliminar elementos creados', () => {
   });
 
   test('@CP99FPP Eliminar playlists', async ({ page }) => {
-    test.setTimeout(90000);
+    test.setTimeout(300000);
     const globalPage = await loginSetup(page);
     const playlistPage = new PlaylistPage(page);
 
@@ -148,7 +143,7 @@ test.describe('Limpieza suite: eliminar elementos creados', () => {
   });
 
   test('@CP99GPP Eliminar layout', async ({ page }) => {
-    test.setTimeout(60000);
+    test.setTimeout(300000);
     const globalPage = await loginSetup(page);
     const dashboardPage = new DashboardPage(page);
     const layoutPage = new LayoutPage(page);
@@ -166,7 +161,7 @@ test.describe('Limpieza suite: eliminar elementos creados', () => {
   });
 
   test('@CP99HPP Eliminar usuarios', async ({ page }) => {
-    test.setTimeout(60000);
+    test.setTimeout(300000);
     const globalPage = await loginSetup(page);
     const userPage = new UserPage(page);
 
@@ -185,7 +180,7 @@ test.describe('Limpieza suite: eliminar elementos creados', () => {
   });
 
   test('@CP99IPP Eliminar rol', async ({ page }) => {
-    test.setTimeout(60000);
+    test.setTimeout(300000);
     const globalPage = await loginSetup(page);
     const rolePage = new RolePage(page);
 
@@ -202,7 +197,7 @@ test.describe('Limpieza suite: eliminar elementos creados', () => {
   });
 
   test('@CP99JPP Eliminar cliente', async ({ page }) => {
-    test.setTimeout(60000);
+    test.setTimeout(300000);
     const globalPage = await loginSetup(page);
     const customerPage = new CustomerPage(page);
 

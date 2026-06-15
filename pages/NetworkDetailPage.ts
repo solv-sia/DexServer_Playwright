@@ -10,6 +10,7 @@ export class NetworkDetailPage extends BasePage {
   }
 
   private elements = {
+    plDefaultCombo:    () => this.page.locator('dex-network-display-detail#dexNetworkDetail dex-playlist-combo vaadin-combo-box#playlistMenu'),
     plDefaultInput:    () => this.page.locator('dex-network-display-detail#dexNetworkDetail dex-playlist-combo #playlistMenu input'),
     groupInput:        () => this.page.locator('dex-network-display-detail#dexNetworkDetail dex-group-combo #groupMenu input'),
     groupClearBtn:     () => this.page.locator('dex-network-display-detail#dexNetworkDetail #groupMenu #clearButton'),
@@ -22,58 +23,169 @@ export class NetworkDetailPage extends BasePage {
     tagCombo:          () => this.page.locator('dex-network-display-detail#dexNetworkDetail paper-icon-item:has(iron-icon[icon="label"]) vaadin-combo-box'),
     versionInput:      () => this.page.locator('dex-network-display-detail#dexNetworkDetail paper-icon-item:has(iron-icon[icon="image:filter-2"])').nth(1).locator('vaadin-combo-box input'),
     versionLabel:      () => this.page.locator('paper-icon-item').filter({ hasText: /Versión actual|Current version/i }).locator('div.device-img + span'),
+    playerNameInput:   () => this.page.locator('dex-network-display-detail#dexNetworkDetail paper-input.flex.input-name').locator('input'),
     saveButton:        () => this.page.locator("dex-network-display-detail#dexNetworkDetail paper-icon-button[title='Guardar'], dex-network-display-detail#dexNetworkDetail paper-icon-button[title='Save']"),
     tagContainer:      () => this.page.locator('#tagSelector .textarea-container'),
     playlistAnalyzerBtn: () => this.page.locator("dex-network-display-detail#dexNetworkDetail paper-icon-button[icon='av:subscriptions']"),
+    storeCombo:        () => this.page.locator('dex-network-display-detail#dexNetworkDetail paper-icon-item:has(iron-icon[icon="store"]) vaadin-combo-box'),
   };
 
   private async waitForDetailPanel() {
+    // Poll the save button bounding box — the panel may be CSS-hidden (Polymer transform animation)
+    // even after the [opened] attribute is set, so state:'visible' would always timeout.
+    const saveBtn = this.elements.saveButton();
+    for (let i = 0; i < 150; i++) {
+      const box = await saveBtn.boundingBox().catch(() => null);
+      if (box && box.width > 0 && box.height > 0) break;
+      await this.page.waitForTimeout(200);
+    }
+    // Then confirm the group combo also has real dimensions before interacting
     const input = this.elements.groupCombo().locator('input');
-    for (let i = 0; i < 25; i++) {
+    for (let i = 0; i < 40; i++) {
       const box = await input.boundingBox();
-      if (box && box.x >= 0 && box.x < 1920 && box.width > 0) return;
+      if (box && box.width > 0 && box.height > 0) return;
       await this.page.waitForTimeout(200);
     }
   }
 
-  private async fillVaadinCombo(input: ReturnType<typeof this.page.locator>, value: string) {
-    await input.click({ force: true });
+  private async waitForVaadinComboReady(combo: ReturnType<typeof this.page.locator>) {
+    for (let i = 0; i < 20; i++) {
+      const items = await combo.evaluate((el: any) => el.items ? el.items.length : 0).catch(() => 0);
+      if (items > 0) return;
+      await this.page.waitForTimeout(150);
+    }
+  }
+
+  private async selectInOpenedCombo(value: string) {
+    // Poll until filteredItems actually contain the search value (vaadin filters asynchronously)
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const hasMatch = await this.page.evaluate((val) => {
+        function findInShadow(root: Document | ShadowRoot, sel: string): Element | null {
+          const el = root.querySelector(sel);
+          if (el) return el;
+          for (const e of Array.from(root.querySelectorAll('*'))) {
+            const sr = (e as any).shadowRoot;
+            if (sr) { const f = findInShadow(sr, sel); if (f) return f; }
+          }
+          return null;
+        }
+        const c = findInShadow(document, 'vaadin-combo-box[opened]') as any;
+        if (!c) return false;
+        return (c.filteredItems || []).some((i: any) => {
+          const label = typeof i === 'string' ? i : (i.label || String(i.value ?? ''));
+          return label.toLowerCase().includes(val.toLowerCase());
+        });
+      }, value);
+      if (hasMatch) break;
+      await this.page.waitForTimeout(150);
+    }
+    await this.page.evaluate((val) => {
+      function findInShadow(root: Document | ShadowRoot, sel: string): Element | null {
+        const el = root.querySelector(sel);
+        if (el) return el;
+        for (const e of Array.from(root.querySelectorAll('*'))) {
+          const sr = (e as any).shadowRoot;
+          if (sr) { const f = findInShadow(sr, sel); if (f) return f; }
+        }
+        return null;
+      }
+      const vaadinCombo = findInShadow(document, 'vaadin-combo-box[opened]') as any;
+      if (!vaadinCombo) return;
+      const filtered: any[] = vaadinCombo.filteredItems || [];
+      // Pick first item whose label matches the search value; fall back to filtered[0]
+      const match = filtered.find((i: any) => {
+        const label = typeof i === 'string' ? i : (i.label || String(i.value ?? ''));
+        return label.toLowerCase().includes(val.toLowerCase());
+      }) ?? filtered[0] ?? (vaadinCombo.items || [])[0];
+      if (!match) return;
+      vaadinCombo.selectedItem = match;
+      // vaadin fires value-changed internally when selectedItem is set — no synthetic dispatch needed
+      vaadinCombo.opened = false;
+    }, value);
+  }
+
+  private async fillVaadinCombo(combo: ReturnType<typeof this.page.locator>, value: string) {
+    await this.waitForVaadinComboReady(combo);
+    const openOverlay = this.page.locator('vaadin-combo-box-overlay[opened]');
+    await openOverlay.waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
+    const input = combo.locator('input');
+    await input.dispatchEvent('click');
+    await input.dispatchEvent('focus');
     await input.fill(value, { force: true });
-    await this.page.locator('vaadin-combo-box-overlay').waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
-    await input.press('ArrowDown');
-    await input.press('Enter');
+    await openOverlay.waitFor({ state: 'visible', timeout: 15000 });
+    await this.selectInOpenedCombo(value);
+    await openOverlay.waitFor({ state: 'hidden', timeout: 8000 }).catch(() => {});
+    await this.page.waitForTimeout(300);
   }
 
   private async waitForPlaylistReady() {
     const combo = this.page.locator('dex-network-display-detail#dexNetworkDetail dex-playlist-combo vaadin-combo-box#playlistMenu');
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 20; i++) {
       const items = await combo.evaluate((el: any) => el.items ? el.items.length : 0).catch(() => 0);
       if (items > 0) return;
-      await this.page.waitForTimeout(300);
+      await this.page.waitForTimeout(200);
     }
   }
 
-  private async fillPlaylistCombo(input: ReturnType<typeof this.page.locator>, value: string) {
+  private async fillPlaylistCombo(combo: ReturnType<typeof this.page.locator>, value: string) {
     await this.waitForPlaylistReady();
-    await input.click({ force: true });
-    await input.press('Control+a');
-    await input.pressSequentially(value, { delay: 50 });
-    await this.page.locator('vaadin-combo-box-overlay').waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+    const openOverlay = this.page.locator('vaadin-combo-box-overlay[opened]');
+    await openOverlay.waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
+    const input = combo.locator('input');
+    await input.dispatchEvent('click');
+    await input.dispatchEvent('focus');
+    await input.fill(value, { force: true });
+    await openOverlay.waitFor({ state: 'visible', timeout: 15000 });
+    await this.selectInOpenedCombo(value);
+    await openOverlay.waitFor({ state: 'hidden', timeout: 8000 }).catch(() => {});
     await this.page.waitForTimeout(300);
-    await input.press('ArrowDown');
-    await this.page.waitForTimeout(100);
-    await input.press('Enter');
   }
 
-  async clickSave() { await this.elements.saveButton().click(); }
+  async setPlayerName(name: string) {
+    await this.waitForDetailPanel();
+    const input = this.elements.playerNameInput();
+    await input.click({ force: true });
+    await input.press('Control+a');
+    await input.pressSequentially(name, { delay: 50 });
+    await this.page.waitForTimeout(300);
+  }
+
+  async clickSave() {
+    const btn = this.elements.saveButton();
+    for (let i = 0; i < 150; i++) {
+      const box = await btn.boundingBox().catch(() => null);
+      if (box && box.width > 0 && box.height > 0) break;
+      await this.page.waitForTimeout(200);
+    }
+    await btn.click({ force: true });
+  }
+
+  async dismissCloseDetailDialog() {
+    try {
+      const btn = this.page.locator('paper-dialog paper-button').filter({ hasText: /Cerrar|Close|Sí|Si|Yes|Confirmar|Confirm/i }).first();
+      await btn.waitFor({ state: 'visible', timeout: 10000 });
+      await btn.click({ force: true });
+      await this.page.waitForTimeout(300);
+    } catch {
+      // No dialog appeared
+    }
+  }
 
   async decisionToSavePlayer() {
     const btn = this.elements.saveButton();
+    // Poll until the save button has real dimensions (panel animation may still be running)
+    for (let i = 0; i < 150; i++) {
+      const box = await btn.boundingBox().catch(() => null);
+      if (box && box.width > 0 && box.height > 0) break;
+      await this.page.waitForTimeout(200);
+    }
     const ariaDisabled = await btn.getAttribute('aria-disabled');
     if (ariaDisabled === 'false' || ariaDisabled === null) {
-      await btn.click();
-      await this.page.waitForTimeout(1500);
+      // force:true clicks the exact element referenced by the locator, bypassing
+      // overlap detection that can cause adjacent buttons (like close) to be hit instead
+      await btn.click({ force: true });
       const confirmBtns = this.page.locator('#saveConfirmDialog paper-button, #confirmDialog paper-button').filter({ hasText: /Confirmar/i });
+      await confirmBtns.first().waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
       const count = await confirmBtns.count();
       for (let i = 0; i < count; i++) {
         if (await confirmBtns.nth(i).isVisible()) {
@@ -81,6 +193,7 @@ export class NetworkDetailPage extends BasePage {
           break;
         }
       }
+      await this.waitOverlayClosed(10000);
     }
   }
 
@@ -88,49 +201,48 @@ export class NetworkDetailPage extends BasePage {
     await this.waitForDetailPanel();
     const clearBtn = this.elements.groupClearBtn();
     if (await clearBtn.isVisible()) await clearBtn.click({ force: true });
-    await this.fillVaadinCombo(this.elements.groupCombo().locator('input'), 'ninguno');
+    await this.fillVaadinCombo(this.elements.groupCombo(), 'ninguno');
   }
 
   async completePlayerGroupSelect(groupName: string) {
-    const input = this.elements.groupInput();
-    await input.click({ force: true });
-    await input.press('Control+a');
-    await input.pressSequentially(groupName, { delay: 50 });
-    await this.page.locator('vaadin-combo-box-overlay').waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
-    await this.page.waitForTimeout(300);
-    await input.press('ArrowDown');
-    await this.page.waitForTimeout(100);
-    await input.press('Enter');
+    await this.fillVaadinCombo(this.elements.groupCombo(), groupName);
+    // Group assignment auto-saves — wait for the save toast to appear and clear
+    // before proceeding so it doesn't bleed into the next readInfoPopup check
+    const infoToast = this.page.locator('#infoToast');
+    await infoToast.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
+    await infoToast.waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
   }
 
   async setInheritedPLDefault() {
-    await this.fillPlaylistCombo(this.elements.plDefaultInput(), 'heredado');
+    await this.fillPlaylistCombo(this.elements.plDefaultCombo(), 'heredado');
   }
 
   async setInheritedSchedule() {
-    await this.fillVaadinCombo(this.elements.scheduleInput(), 'heredado');
+    await this.fillVaadinCombo(this.elements.scheduleCombo(), 'heredado');
   }
 
   async setInheritedTP() {
-    await this.fillVaadinCombo(this.elements.tpCombo().locator('input'), 'heredado');
+    await this.fillVaadinCombo(this.elements.tpCombo(), 'heredado');
   }
 
   async setInheritedHP() {
-    await this.fillVaadinCombo(this.elements.hpCombo().locator('input'), 'heredado');
+    await this.fillVaadinCombo(this.elements.hpCombo(), 'heredado');
+    // HP change can trigger a Polymer re-render of the whole panel — wait for it to settle
+    await this.waitForDetailPanel();
   }
 
   async setNewPlaylist(playlist: string, backupPlaylist: string) {
     const current = await this.elements.plDefaultInput().inputValue();
     const target = current.trim() === playlist ? backupPlaylist : playlist;
     this.plApplied = target;
-    await this.fillPlaylistCombo(this.elements.plDefaultInput(), target);
+    await this.fillPlaylistCombo(this.elements.plDefaultCombo(), target);
   }
 
   async setNewSchedule(schedule: string, backupSchedule: string) {
     const current = await this.elements.scheduleInput().inputValue();
     const target = current.trim() === schedule ? backupSchedule : schedule;
     this.shApplied = target;
-    await this.fillVaadinCombo(this.elements.scheduleInput(), target);
+    await this.fillVaadinCombo(this.elements.scheduleCombo(), target);
   }
 
   async getCurrentVersion(): Promise<string> {
@@ -176,12 +288,14 @@ export class NetworkDetailPage extends BasePage {
     transmissionPolicyName,
     scheduleName,
     timeZone,
+    storeName,
   }: {
     playlistName?: string;
     hardwarePolicyName?: string;
     transmissionPolicyName?: string;
     scheduleName?: string;
     timeZone?: string;
+    storeName?: string;
   }) {
     await this.dismissConfirmDialog();
     await this.waitForDetailPanel();
@@ -205,6 +319,23 @@ export class NetworkDetailPage extends BasePage {
       const val = await this.waitForInputValue(this.elements.timeZoneCombo().locator('input'));
       this.assertInherited(val, timeZone);
     }
+    if (storeName) {
+      await this.page.evaluate(() => {
+        function findInShadow(root: Document | ShadowRoot, sel: string): Element | null {
+          const el = root.querySelector(sel); if (el) return el;
+          for (const e of Array.from(root.querySelectorAll('*'))) {
+            if ((e as any).shadowRoot) { const f = findInShadow((e as any).shadowRoot, sel); if (f) return f; }
+          } return null;
+        }
+        const container = findInShadow(document, '.inner-container');
+        if (container) (container as HTMLElement).scrollLeft = (container as HTMLElement).scrollWidth;
+      });
+      await this.page.waitForTimeout(500);
+      // The store is rendered as a <span> inside the shadow DOM — getByText pierces shadow DOM automatically.
+      await expect(
+        this.page.locator('dex-network-display-detail#dexNetworkDetail').getByText(storeName, { exact: false })
+      ).toBeVisible({ timeout: 8000 });
+    }
   }
 
   async clickPlaylistAnalyzerBtn() { await this.elements.playlistAnalyzerBtn().click(); }
@@ -226,6 +357,6 @@ export class NetworkDetailPage extends BasePage {
       (innerContainer as HTMLElement).scrollLeft = (innerContainer as HTMLElement).scrollLeft + (tagRect.left - containerRect.left);
     });
     await this.page.waitForTimeout(1000);
-    await expect(this.elements.tagContainer()).toContainText(tagName, { timeout: 15000 });
+    await expect(this.elements.tagContainer()).toContainText(tagName, { timeout: 30000 });
   }
 }

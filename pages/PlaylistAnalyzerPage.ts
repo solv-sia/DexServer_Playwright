@@ -7,9 +7,9 @@ export class PlaylistAnalyzerPage extends BasePage {
   }
 
   private elements = {
-    modal:         () => this.page.locator('#dexPlaylistAnalyzer'),
-    title:         () => this.page.locator('#dexPlaylistAnalyzer span'),
-    closeBtn:      () => this.page.locator("#dexPlaylistAnalyzer paper-icon-button[icon='close']").first(),
+    modal:         () => this.page.locator("#dexPlaylistAnalyzer[view='group']"),
+    title:         () => this.page.locator("#dexPlaylistAnalyzer[opened] span").first(),
+    closeBtn:      () => this.page.locator("#dexPlaylistAnalyzer[opened] app-toolbar paper-icon-button:nth-child(6)"),
     playerModal:   () => this.page.locator("#dexNetworkDetail #dexPlaylistAnalyzer[view='player']"),
     scheduleModal: () => this.page.locator("#dexScheduleDetail #dexPlaylistAnalyzer[view='schedule']"),
   };
@@ -31,6 +31,7 @@ export class PlaylistAnalyzerPage extends BasePage {
   }
 
   async clickPlaylistAnalyzerCloseBtn() {
-    await this.elements.closeBtn().click({ force: true });
+    await this.page.keyboard.press('Escape');
+    await this.page.waitForTimeout(800);
   }
 }

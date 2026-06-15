@@ -1,6 +1,7 @@
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import configJson from './configuration.json';
+import dateFormatter from './dateFormatter';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env.demo5') });
 
@@ -12,9 +13,11 @@ const config = {
   baseUrl: process.env.BASE_URL_DEX ?? '',
 
   userName: 'testermation',
+  userName2: 'testermation2',
   password: 'QA!2023+',
 
   clientName: configJson.clientName,
+  clientNameFiltros: configJson.clientNameFiltros,
   newClientName: configJson.newClientName,
 
   // CP05PP
@@ -54,8 +57,28 @@ const config = {
   ruta: configJson.ruta,
   medias: configJson.medias,
 
+  // Automation API
+  automationApiUrl: process.env.AUTOMATION_API_URL ?? 'http://localhost:3050',
+  automationApiToken: process.env.AUTOMATION_API_TOKEN ?? '',
+  automationApiDbKey: process.env.AUTOMATION_API_DB_KEY ?? 'demo5',
+
   // CP11PP+
-  playerCP11PP: configJson.playerCP11PP,
+  playerCP11PP: `${configJson.playerCP11PP} ${dateFormatter.datetime()}`,
+  playerCP14PP: `${configJson.playerCP14PP} ${dateFormatter.datetime()}`,
+  playerCP34PP: `${configJson.playerCP34PP} ${dateFormatter.datetime()}`,
+  playerCP16PP1: `${configJson.playerCP16PP1} ${dateFormatter.datetime()}`,
+  playerCP16PP2: `${configJson.playerCP16PP2} ${dateFormatter.datetime()}`,
+  playerCP21PP1: `${configJson.playerCP21PP1} ${dateFormatter.datetime()}`,
+  playerCP21PP2: `${configJson.playerCP21PP2} ${dateFormatter.datetime()}`,
+  playerCP29PP1: `${configJson.playerCP29PP1} ${dateFormatter.datetime()}`,
+  playerCP29PP2: `${configJson.playerCP29PP2} ${dateFormatter.datetime()}`,
+  playerCP30PP1: `${configJson.playerCP30PP1} ${dateFormatter.datetime()}`,
+  playerCP30PP2: `${configJson.playerCP30PP2} ${dateFormatter.datetime()}`,
+  playerCP38PP: `${configJson.playerCP38PP} ${dateFormatter.datetime()}`,
+  tenant31: configJson.tenant31,
+  tenantActivationKeyCP11PP: configJson.tenantActivationKeyCP11PP,
+  tenantActivationKeyCP14PP: configJson.tenantActivationKeyCP14PP,
+  tenantActivationKeyCP16PP: configJson.tenantActivationKeyCP16PP,
   player1: configJson.player1,
   player2: configJson.player2,
   emptyGroupName: configJson.emptyGroupName,
@@ -78,12 +101,11 @@ const config = {
   LNLhardwarePolicyName: configJson.LNLhardwarePolicyName,
 
   // CP19PP
+  playerCP19PP: configJson.playerCP19PP,
   scheduleCP19PP: configJson.scheduleCP19PP,
   playlistDefaultCP19PP: configJson.playlistDefaultCP19PP,
   playlistDefaultCP19BackUp: configJson.playlistDefaultCP19BackUp,
   scheduleCP19BackUp: configJson.scheduleCP19BackUp,
-  machineIdCP19: configJson.machineIdCP19,
-  messageKeyCP19: configJson.messageKeyCP19,
   playlistDefaultCP19Id: configJson.playlistDefaultCP19Id,
   scheduleCP19Id: configJson.scheduleCP19Id,
   scheduleCP19BackupId: configJson.scheduleCP19BackupId,
@@ -101,12 +123,18 @@ const config = {
   searchSyncGroupName: configJson.searchSyncGroupName,
 
   // CP22PP
+  playerCP22PP: configJson.playerCP22PP,
   previousVersion: configJson.previousVersion,
   latestVersion: configJson.latestVersion,
 
   // CP23PP
-  machineIdCP23PP: configJson.machineIdCP23PP,
-  messageKeyCP23PP: configJson.messageKeyCP23PP,
+  playerCP23PP: configJson.playerCP23PP,
+  // CP24PP
+  playerCP24PP: configJson.playerCP24PP,
+  // CP25PP
+  playerCP25PP: configJson.playerCP25PP,
+  // CP26PP
+  playerCP26PP: configJson.playerCP26PP,
 
   // CP27/28PP
   replaceAndRemoveMediaPath: configJson.replaceAndRemoveMediaPath,

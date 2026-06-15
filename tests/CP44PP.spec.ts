@@ -1,29 +1,24 @@
 // Crear SuperTenant, activarlo e ingresar configurando zona horaria
 import { test } from '@playwright/test';
-import * as path from 'path';
 import config from '../utils/config';
 import dateFormatter from '../utils/dateFormatter';
 import { GlobalPage } from '../pages/GlobalPage';
+import { loginWithSession } from '../utils/loginWithSession';
 import { CustomerPage } from '../pages/CustomerPage';
 import { GeneralPage } from '../pages/GeneralPage';
 
-test.use({ storageState: path.join(__dirname, '../auth/storageState.json') });
+test.use({ storageState: { cookies: [], origins: [] } });
 
 test.describe('Crear SuperTenant y activarlo', () => {
   test('@CP44PP', async ({ page }) => {
-    test.setTimeout(90000);
+    test.setTimeout(300000);
 
-    await page.goto(`${config.baseUrl}/DexFrontEnd/`, { waitUntil: 'domcontentloaded' });
 
     const globalPage = new GlobalPage(page);
     const customerPage = new CustomerPage(page);
     const generalPage = new GeneralPage(page);
 
-    await globalPage.waitSpinner();
-    await globalPage.switchToNewTenant(config.clientName);
-    await globalPage.loginDecision(config.password);
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await globalPage.waitSpinner();
+    await loginWithSession(page, config.userName2, config.password);
 
     const superCustomerName = 'nuevo SuperTenant ' + dateFormatter.datetime();
 

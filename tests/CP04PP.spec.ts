@@ -1,13 +1,13 @@
 // Crear un Rol dentro del Cliente creado en CP02PP
 import { test } from '@playwright/test';
-import * as path from 'path';
 import config from '../utils/config';
 import dateFormatter from '../utils/dateFormatter';
 import { setSharedData, getSharedData } from '../utils/sharedData';
 import { GlobalPage } from '../pages/GlobalPage';
+import { loginWithSession } from '../utils/loginWithSession';
 import { RolePage } from '../pages/RolePage';
 
-test.use({ storageState: path.join(__dirname, '../auth/storageState.json') });
+test.use({ storageState: { cookies: [], origins: [] } });
 
 test.describe('Crear un Rol dentro del Cliente creado', () => {
   test('@CP04PP', async ({ page }) => {
@@ -17,16 +17,11 @@ test.describe('Crear un Rol dentro del Cliente creado', () => {
     const customerName = getSharedData('customerCP02PP');
     if (!customerName) throw new Error('customerCP02PP not found in shared data. Run CP02PP first.');
 
-    await page.goto(`${config.baseUrl}/DexFrontEnd/`, { waitUntil: 'domcontentloaded' });
 
     const globalPage = new GlobalPage(page);
     const rolePage = new RolePage(page);
 
-    await globalPage.waitSpinner();
-    await globalPage.switchToNewTenant(customerName);
-    await globalPage.loginDecision(config.password);
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await globalPage.waitSpinner();
+    await loginWithSession(page, config.userName, config.password, customerName);
 
     await globalPage.clickMenuSetting();
     await globalPage.clickOptionRole();

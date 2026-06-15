@@ -33,4 +33,11 @@ export class BasePage {
     await input.clear();
     await input.fill(text, { force: true });
   }
+
+  protected async waitOverlayClosed(timeout = 15000): Promise<void> {
+    await this.page.waitForFunction(
+      () => !document.querySelector('iron-overlay-backdrop[opened]'),
+      { timeout }
+    ).catch(() => {});
+  }
 }
