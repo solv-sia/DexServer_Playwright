@@ -47,11 +47,16 @@ export class NetworkPage extends BasePage {
     await input.fill('', { force: true });
     await input.fill(name, { force: true });
     await input.press('Enter');
-    // Wait until the card shell has real dimensions (Polymer renders content asynchronously)
-    const card = this.elements.resultingPlayer().first();
+    // Wait until the result has real dimensions (Polymer renders asynchronously).
+    // Check both player cards and group cards so empty-group searches don't
+    // burn the full 15 s waiting for player cards that will never appear.
+    const card  = this.elements.resultingPlayer().first();
+    const group = this.page.locator('#dexNetworkList dex-network-group').first();
     for (let i = 0; i < 30; i++) {
-      const box = await card.boundingBox().catch(() => null);
-      if (box && box.width > 0 && box.height > 0) return;
+      const cardBox  = await card.boundingBox().catch(() => null);
+      if (cardBox  && cardBox.width  > 0 && cardBox.height  > 0) return;
+      const groupBox = await group.boundingBox().catch(() => null);
+      if (groupBox && groupBox.width > 0 && groupBox.height > 0) return;
       await this.page.waitForTimeout(500);
     }
   }
@@ -98,13 +103,21 @@ export class NetworkPage extends BasePage {
   async clickMoreBtn()         { await this.elements.moreBtn().click(); }
   async clickGroupBtn()        { await this.elements.groupBtn().click(); }
   async clickSyncGroupBtn()    { await this.elements.syncGroupBtn().click(); }
-  async clickNetworkOptions()  { await this.elements.networkOptions().click(); }
+  async clickNetworkOptions() {
+    await this.elements.networkOptions().click();
+    // Wait for the options panel to open before the caller reads from it
+    await this.page.locator('#dexNetworkList .background-item paper-listbox[slot="dropdown-content"]')
+      .waitFor({ state: 'attached', timeout: 5000 }).catch(() => {});
+  }
 
   async verifyEmptyGroupsCheckBox() {
     const el = this.elements.showEmptyGroupsChk();
-    const ariaPressed = await el.getAttribute('aria-pressed');
+    // getAttribute defaults to timeout:0 (no timeout) — cap it so the test
+    // doesn't silently wait 300s when the panel element isn't in the DOM yet.
+    const ariaPressed = await el.getAttribute('aria-pressed', { timeout: 8000 }).catch(() => null);
     if (ariaPressed !== 'true') {
-      await el.click();
+      await el.click({ force: true });
+      await this.page.waitForTimeout(300);
     }
   }
 

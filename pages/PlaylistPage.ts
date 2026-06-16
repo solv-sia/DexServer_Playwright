@@ -10,7 +10,7 @@ export class PlaylistPage extends BasePage {
     addButton:           () => this.findElement({ get: "[icon-start='add']", find: ['#paperFab'], eq: 0 }),
     theaterslistButton:  () => this.findElement({ get: "[icon='theaters']", find: ['#paperFab'] }),
     searchLayoutInput:   () => this.findElement({ get: '#searchLayout', find: ['input'] }),
-    resultingLayout:     () => this.page.locator('.vertical.layout.center.layout-card'),
+    resultingLayout:     () => this.page.locator('.vertical.layout.center.layout-card').first(),
     confirmButton:       () => this.page.locator("[dialog-confirm='']").nth(1),
     namePlaylistInput:   () => this.page.locator('.flex.input-name >> input[placeholder]').filter({ hasText: '' }),
     saveButton:          () => this.page.locator("[icon='save']"),
@@ -48,7 +48,10 @@ export class PlaylistPage extends BasePage {
   async clickTodayButtonTo() { await this.elements.todayButtonTo().click(); }
 
   async typeSearchLayoutInput(layout: string) {
-    await this.elements.searchLayoutInput().fill(layout, { force: true });
+    const input = this.elements.searchLayoutInput();
+    await input.fill(layout, { force: true });
+    await input.press('Enter');
+    await this.page.waitForTimeout(500);
   }
 
   async typeNamePlaylistInput(name: string) {

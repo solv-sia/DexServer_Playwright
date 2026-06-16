@@ -25,6 +25,7 @@ export class NetworkDetailPage extends BasePage {
     versionLabel:      () => this.page.locator('paper-icon-item').filter({ hasText: /Versión actual|Current version/i }).locator('div.device-img + span'),
     playerNameInput:   () => this.page.locator('dex-network-display-detail#dexNetworkDetail paper-input.flex.input-name').locator('input'),
     saveButton:        () => this.page.locator("dex-network-display-detail#dexNetworkDetail paper-icon-button[title='Guardar'], dex-network-display-detail#dexNetworkDetail paper-icon-button[title='Save']"),
+    closeButton:       () => this.page.locator("dex-network-display-detail#dexNetworkDetail paper-icon-button[title='Cerrar'], dex-network-display-detail#dexNetworkDetail paper-icon-button[title='Close']").first(),
     tagContainer:      () => this.page.locator('#tagSelector .textarea-container'),
     playlistAnalyzerBtn: () => this.page.locator("dex-network-display-detail#dexNetworkDetail paper-icon-button[icon='av:subscriptions']"),
     storeCombo:        () => this.page.locator('dex-network-display-detail#dexNetworkDetail paper-icon-item:has(iron-icon[icon="store"]) vaadin-combo-box'),
@@ -57,9 +58,22 @@ export class NetworkDetailPage extends BasePage {
   }
 
   private async selectInOpenedCombo(value: string) {
-    // Poll until filteredItems actually contain the search value (vaadin filters asynchronously)
-    for (let attempt = 0; attempt < 20; attempt++) {
-      const hasMatch = await this.page.evaluate((val) => {
+    const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    // Primary: click via ARIA role — getByRole pierces shadow DOM, works for vaadin-combo-box-item
+    const option = this.page.locator('vaadin-combo-box-overlay[opened]')
+      .getByRole('option')
+      .filter({ hasText: new RegExp(escaped, 'i') })
+      .first();
+    const clicked = await option.waitFor({ state: 'visible', timeout: 8000 })
+      .then(() => option.click().then(() => true))
+      .catch(() => false);
+    if (clicked) return;
+
+    // Fallback: JS property assignment via filteredItems (server-side combos or when overlay click fails)
+    let hasMatch = false;
+    for (let attempt = 0; attempt < 40; attempt++) {
+      hasMatch = await this.page.evaluate((val) => {
         function findInShadow(root: Document | ShadowRoot, sel: string): Element | null {
           const el = root.querySelector(sel);
           if (el) return el;
@@ -72,13 +86,19 @@ export class NetworkDetailPage extends BasePage {
         const c = findInShadow(document, 'vaadin-combo-box[opened]') as any;
         if (!c) return false;
         return (c.filteredItems || []).some((i: any) => {
-          const label = typeof i === 'string' ? i : (i.label || String(i.value ?? ''));
-          return label.toLowerCase().includes(val.toLowerCase());
+          const text = typeof i === 'string' ? i
+            : [i.label, i.name, i.text, i.displayValue].filter(Boolean).join(' ') || String(i.value ?? '');
+          return text.toLowerCase().includes(val.toLowerCase());
         });
       }, value);
       if (hasMatch) break;
       await this.page.waitForTimeout(150);
     }
+
+    if (!hasMatch) {
+      throw new Error(`vaadin-combo: item matching "${value}" not found via role=option or filteredItems after 8s`);
+    }
+
     await this.page.evaluate((val) => {
       function findInShadow(root: Document | ShadowRoot, sel: string): Element | null {
         const el = root.querySelector(sel);
@@ -92,14 +112,13 @@ export class NetworkDetailPage extends BasePage {
       const vaadinCombo = findInShadow(document, 'vaadin-combo-box[opened]') as any;
       if (!vaadinCombo) return;
       const filtered: any[] = vaadinCombo.filteredItems || [];
-      // Pick first item whose label matches the search value; fall back to filtered[0]
       const match = filtered.find((i: any) => {
-        const label = typeof i === 'string' ? i : (i.label || String(i.value ?? ''));
-        return label.toLowerCase().includes(val.toLowerCase());
+        const text = typeof i === 'string' ? i
+          : [i.label, i.name, i.text, i.displayValue].filter(Boolean).join(' ') || String(i.value ?? '');
+        return text.toLowerCase().includes(val.toLowerCase());
       }) ?? filtered[0] ?? (vaadinCombo.items || [])[0];
       if (!match) return;
       vaadinCombo.selectedItem = match;
-      // vaadin fires value-changed internally when selectedItem is set — no synthetic dispatch needed
       vaadinCombo.opened = false;
     }, value);
   }
@@ -171,7 +190,7 @@ export class NetworkDetailPage extends BasePage {
     }
   }
 
-  async decisionToSavePlayer() {
+  async decisionToSavePlayer(closeIfDisabled = true): Promise<boolean> {
     const btn = this.elements.saveButton();
     // Poll until the save button has real dimensions (panel animation may still be running)
     for (let i = 0; i < 150; i++) {
@@ -194,23 +213,41 @@ export class NetworkDetailPage extends BasePage {
         }
       }
       await this.waitOverlayClosed(10000);
+      return true;
     }
+    // No pending changes
+    if (closeIfDisabled) {
+      await this.elements.closeButton().click({ force: true });
+      await this.waitOverlayClosed(10000);
+    }
+    return false;
   }
 
   async setGroupNone() {
     await this.waitForDetailPanel();
+    const infoToast = this.page.locator('#infoToast');
+    // Ensure any previous toast is gone before we start monitoring.
+    await infoToast.waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
+    // Start monitoring BEFORE any combo interaction so we can't miss a fast auto-save
+    // that fires during clearBtn.click() or fillVaadinCombo().
+    const autoSavePromise = infoToast.waitFor({ state: 'visible', timeout: 8000 })
+      .then(() => true).catch(() => false);
     const clearBtn = this.elements.groupClearBtn();
     if (await clearBtn.isVisible()) await clearBtn.click({ force: true });
     await this.fillVaadinCombo(this.elements.groupCombo(), 'ninguno');
+    // Collect any auto-save toast (same Polymer observer as completePlayerGroupSelect).
+    // Wait for it to fully disappear so the stale label can't pollute the next readInfoPopup.
+    if (await autoSavePromise) {
+      await infoToast.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+    }
   }
 
   async completePlayerGroupSelect(groupName: string) {
     await this.fillVaadinCombo(this.elements.groupCombo(), groupName);
-    // Group assignment auto-saves — wait for the save toast to appear and clear
-    // before proceeding so it doesn't bleed into the next readInfoPopup check
+    // Group assignment auto-saves — wait for the save toast to confirm the save fired.
+    // Do NOT wait for hidden: the caller's readInfoPopup verifies and consumes the toast.
     const infoToast = this.page.locator('#infoToast');
     await infoToast.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
-    await infoToast.waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
   }
 
   async setInheritedPLDefault() {

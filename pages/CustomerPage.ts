@@ -56,13 +56,16 @@ export class CustomerPage extends BasePage {
   }
 
   async typeSearchInput(customerName: string) {
+    await this.waitOverlayClosed(30000);
     const input = this.elements.searchInput();
-    await input.click({ timeout: 40000 });
     await input.fill(customerName, { force: true });
   }
 
   async clickToogle() {
-    await this.elements.toggle().click({ force: true });
+    const toggle = this.elements.toggleState();
+    await toggle.scrollIntoViewIfNeeded();
+    await toggle.waitFor({ state: 'visible', timeout: 10000 });
+    await toggle.click();
   }
 
   async checkToogleActived() {
@@ -71,11 +74,9 @@ export class CustomerPage extends BasePage {
 
   async deleteCustomer(customerName: string) {
     await this.typeSearchInput(customerName);
-    await this.page.waitForTimeout(500);
     await this.page.locator('dex-settings-customer').first().click();
-    await this.page.waitForTimeout(300);
     await this.page.locator('paper-icon-button[icon="delete"]').first().click({ force: true });
-    await this.page.locator('paper-button[role="button"]').filter({ hasText: /Confirmar|Confirm/i }).first().click();
-    await this.page.waitForTimeout(500);
+    await this.page.locator('paper-button[role="button"]').filter({ hasText: /Confirmar|Confirm/i }).first().click({ force: true });
+    await this.waitOverlayClosed();
   }
 }

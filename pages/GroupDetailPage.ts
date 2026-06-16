@@ -6,7 +6,7 @@ export class GroupDetailPage extends BasePage {
     super(page);
   }
 
-  private dialog = () => this.page.locator('#multiEditData paper-dialog#multiEdit');
+  private dialog = () => this.page.locator('#multiEditData paper-dialog#multiEdit').first();
 
   private elements = {
     groupNameInput:         () => this.dialog().locator('paper-icon-item:has(iron-icon[icon="create"]) paper-input input'),
@@ -29,10 +29,16 @@ export class GroupDetailPage extends BasePage {
 
   private async fillVaadinCombo(combo: ReturnType<typeof this.page.locator>, value: string) {
     const input = combo.locator('input');
+    const overlay = this.page.locator('vaadin-combo-box-overlay[opened]');
+    await overlay.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
     await input.click({ force: true });
     await input.fill(value, { force: true });
+    // Wait for filtered overlay — catch so a slow server doesn't abort the whole form
+    await overlay.waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
     await input.press('ArrowDown');
     await input.press('Enter');
+    await overlay.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+    await this.page.waitForTimeout(200);
   }
 
   async completeGroupNameInput(groupName: string) {
@@ -106,8 +112,10 @@ export class GroupDetailPage extends BasePage {
   }
 
   async clickSaveGroupBtn() {
-    await this.elements.saveGroupBtn().dispatchEvent('click');
-    await this.dialog().waitFor({ state: 'hidden', timeout: 15000 }).catch(() => {});
+    const btn = this.elements.saveGroupBtn();
+    await btn.waitFor({ state: 'visible', timeout: 5000 });
+    await btn.click({ force: true });
+    await this.dialog().waitFor({ state: 'hidden', timeout: 15000 });
     await this.page.waitForTimeout(500);
   }
 

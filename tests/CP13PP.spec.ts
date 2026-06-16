@@ -27,9 +27,7 @@ test.describe('Crear un calendario con varios periodos', () => {
     await globalPage.waitSpinner();
 
     await schedulePage.createPeriodToday(config.calendarPL);
-    await page.waitForTimeout(5000);
     await schedulePage.createPeriodTomorrow(config.calendarPL);
-    await page.waitForTimeout(5000);
     await schedulePage.typeNameScheduleInput(scheduleName);
 
     await schedulePage.clickSaveButton();

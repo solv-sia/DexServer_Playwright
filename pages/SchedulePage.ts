@@ -31,14 +31,24 @@ export class SchedulePage extends BasePage {
     return d === 6 ? 0 : d + 1;
   }
 
-  async clickAddButton()      { await this.elements.addButton().click(); }
-  async clickScheduleButton() { await this.elements.scheduleButton().click(); }
-  async clickSaveButton()     { await this.elements.saveButton().click(); }
-  async clickAcceptButton()   { await this.elements.acceptButton().click({ force: true }); }
-  async clickResultingSchedule() { await this.elements.resultingSchedule().click(); }
+  async clickAddButton()      { await this.waitOverlayClosed(); await this.elements.addButton().click(); }
+  async clickScheduleButton() { await this.waitOverlayClosed(); await this.elements.scheduleButton().click(); }
+  async clickSaveButton() {
+    const btn = this.elements.saveButton();
+    await btn.scrollIntoViewIfNeeded();
+    await btn.waitFor({ state: 'visible', timeout: 10000 });
+    await btn.click();
+  }
+  async clickAcceptButton() {
+    await this.elements.acceptButton().click({ force: true });
+    await this.waitOverlayClosed();
+  }
+  async clickResultingSchedule() {
+    await this.waitOverlayClosed();
+    await this.elements.resultingSchedule().click();
+  }
 
   async typeNameScheduleInput(name: string) {
-    await this.elements.nameScheduleInput().click();
     await this.elements.nameScheduleInput().fill(name, { force: true });
   }
 
@@ -73,8 +83,10 @@ export class SchedulePage extends BasePage {
 
   async deleteSchedule(scheduleName: string) {
     await this.searchSchedule(scheduleName);
+    await this.waitOverlayClosed();
     await this.elements.resultingSchedule().click();
-    await this.elements.deleteScheduleBtn().click();
-    await this.elements.confirmDeleteBtn().click();
+    await this.elements.deleteScheduleBtn().click({ force: true });
+    await this.elements.confirmDeleteBtn().click({ force: true });
+    await this.waitOverlayClosed();
   }
 }

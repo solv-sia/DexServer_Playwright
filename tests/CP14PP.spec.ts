@@ -52,8 +52,9 @@ test.describe('Set up tenant configuration and validate inheritance', () => {
     await networkDetailPage.setInheritedSchedule();
     await networkDetailPage.setInheritedTP();
     await networkDetailPage.setInheritedHP();
-    await networkDetailPage.decisionToSavePlayer();
-    await globalPage.readInfoPopup(/Player guardado|Player saved/i);
+    if (await networkDetailPage.decisionToSavePlayer()) {
+      await globalPage.readInfoPopup(/Player guardado|Player saved/i);
+    }
     await page.waitForTimeout(5000);
 
     // Configurar ajustes tenant

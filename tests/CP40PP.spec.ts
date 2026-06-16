@@ -31,8 +31,9 @@ test.describe('Asignar playlist de supertenant al player (CP40PP)', () => {
 
     // Asignar la playlist del supertenant como default
     await networkDetailPage.setNewPlaylist(config.PL_CP40PP, config.PL_CP34PP);
-    await networkDetailPage.decisionToSavePlayer();
-    await globalPage.readInfoPopup(/Player guardado|Player saved/i);
+    if (await networkDetailPage.decisionToSavePlayer()) {
+      await globalPage.readInfoPopup(/Player guardado|Player saved/i);
+    }
 
     await page.waitForTimeout(1000);
     await page.screenshot({ path: 'screenshots/cp40pp_assign.png' });

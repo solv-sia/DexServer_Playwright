@@ -38,7 +38,7 @@ test.describe('Verificar progreso de descargas', () => {
     // Assign new PL default
     await networkDetailPage.setNewPlaylist(config.PL_CP34PP, config.PL_CP34PP);
     await networkDetailPage.decisionToSavePlayer();
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(3000); // allow server to process the assignment
 
     // Simulate download completion via automation-api (retries internally until DexServer creates the machine files)
     await simulateDownloads(player);

@@ -43,7 +43,10 @@ export class LayoutPage extends BasePage {
   }
 
   async clickOverlapToggle() {
-    await this.elements.overlapToggle().click();
+    const toggle = this.elements.overlapToggle();
+    await toggle.scrollIntoViewIfNeeded();
+    await toggle.waitFor({ state: 'visible', timeout: 10000 });
+    await toggle.click();
   }
 
   async clickAddFrameButton() {
@@ -104,5 +107,8 @@ export class LayoutPage extends BasePage {
       await this.typeLayoutInput(0, frameWidth);
       await this.typeLayoutInput(1, frameHigh);
     }
+    // Re-select a frame after all fills — Polymer re-renders can deselect frames,
+    // which hides panel controls like #overlapToggle.
+    await this.dblclickLayout();
   }
 }

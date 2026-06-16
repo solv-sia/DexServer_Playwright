@@ -169,36 +169,34 @@ export class GlobalPage extends BasePage {
   }
 
   async readInfoPopup(msg: string | RegExp) {
-    const label = this.elements.infoToastLabel();
-    // Fast path: toast is still visible
-    const isVisible = await label.waitFor({ state: 'visible', timeout: 5000 })
-      .then(() => true).catch(() => false);
-    if (isVisible) {
-      if (msg instanceof RegExp) await expect(label).toHaveText(msg);
-      else await expect(label).toContainText(msg);
-      return;
-    }
-    // Toast already showed and auto-dismissed — text persists in the DOM, verify it
-    await expect(async () => {
-      const text = (await label.textContent() ?? '').trim();
-      const matches = msg instanceof RegExp ? msg.test(text) : text.includes(msg);
-      if (!matches) throw new Error(`Expected info toast matching ${msg} but label has "${text}"`);
-    }).toPass({ timeout: 25000, intervals: [100, 200, 500] });
+    await this._readToast(this.page.locator('#infoToast'), this.elements.infoToastLabel(), msg);
   }
 
   async readErrorPopup(msg: string | RegExp) {
-    const label = this.elements.errorToastLabel();
-    const isVisible = await label.waitFor({ state: 'visible', timeout: 5000 })
+    await this._readToast(this.page.locator('#errorToast'), this.elements.errorToastLabel(), msg);
+  }
+
+  private async _readToast(
+    toast: ReturnType<typeof this.page.locator>,
+    label: ReturnType<typeof this.page.locator>,
+    msg: string | RegExp,
+  ) {
+    // Wait for the toast container to appear (action may still be in progress).
+    // If it dismisses before we call this method, waitFor resolves false and we
+    // fall back to the text that persists in the DOM after dismiss.
+    const appeared = await toast.waitFor({ state: 'visible', timeout: 10000 })
       .then(() => true).catch(() => false);
-    if (isVisible) {
-      if (msg instanceof RegExp) await expect(label).toHaveText(msg);
-      else await expect(label).toContainText(msg);
+
+    if (appeared) {
+      // Toast is visible — verify text while it's still there
+      if (msg instanceof RegExp) await expect(label).toHaveText(msg, { timeout: 8000 });
+      else await expect(label).toContainText(msg, { timeout: 8000 });
       return;
     }
-    await expect(async () => {
-      const text = (await label.textContent() ?? '').trim();
-      const matches = msg instanceof RegExp ? msg.test(text) : text.includes(msg);
-      if (!matches) throw new Error(`Expected error toast matching ${msg} but label has "${text}"`);
-    }).toPass({ timeout: 25000, intervals: [100, 200, 500] });
+
+    // Toast already dismissed — the label keeps the last text in the DOM
+    const text = (await label.textContent() ?? '').trim();
+    const matches = msg instanceof RegExp ? msg.test(text) : text.includes(msg);
+    if (!matches) throw new Error(`Expected toast matching ${msg} but label has "${text}"`);
   }
 }

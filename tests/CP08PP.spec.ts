@@ -23,8 +23,7 @@ test.describe('Upload File', () => {
     const mediaLibraryPage = new MediaLibraryPage(page);
 
     await loginWithSession(page, config.userName2, config.password);
-    await page.waitForTimeout(3000);
-    
+    await globalPage.waitSpinner();
     await globalPage.clickOnMediaLibraryHeader();
 
     await mediaLibraryPage.typeSearchMediaInput2(config.fileUploadPath);

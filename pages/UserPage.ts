@@ -64,18 +64,17 @@ export class UserPage extends BasePage {
   }
 
   async clickConfirmButton() {
-    await this.elements.confirmButton().click();
+    await this.elements.confirmButton().first().click({ force: true });
   }
 
   async deleteUser(username: string) {
     const searchInput = this.page.locator('paper-input.search-input input, input[placeholder*="Buscar"], input[placeholder*="Search"]').first();
     await searchInput.fill(username, { force: true });
     await searchInput.press('Enter');
-    await this.page.waitForTimeout(500);
+    await this.waitOverlayClosed();
     await this.page.locator('dex-settings-user').first().click();
-    await this.page.waitForTimeout(300);
     await this.page.locator('paper-icon-button[icon="delete"]').first().click({ force: true });
-    await this.page.locator('paper-button[role="button"]').filter({ hasText: /Confirmar|Confirm/i }).first().click();
-    await this.page.waitForTimeout(500);
+    await this.page.locator('paper-button[role="button"]').filter({ hasText: /Confirmar|Confirm/i }).first().click({ force: true });
+    await this.waitOverlayClosed();
   }
 }

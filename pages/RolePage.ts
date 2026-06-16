@@ -17,6 +17,7 @@ export class RolePage extends BasePage {
   };
 
   async clickAddButton() {
+    await this.waitOverlayClosed();
     await this.elements.addButton().click();
   }
 
@@ -25,12 +26,12 @@ export class RolePage extends BasePage {
   }
 
   async clickSaveButton() {
-    await this.elements.saveButton().click();
+    await this.elements.saveButton().click({ force: true });
   }
 
   async typeSearchInput(roleName: string) {
+    await this.waitOverlayClosed();
     const input = this.elements.searchInput();
-    await input.click({ timeout: 40000 });
     await input.fill(roleName, { force: true });
   }
 
@@ -46,11 +47,9 @@ export class RolePage extends BasePage {
 
   async deleteRole(roleName: string) {
     await this.typeSearchInput(roleName);
-    await this.page.waitForTimeout(500);
     await this.elements.resultRole().first().click();
-    await this.page.waitForTimeout(300);
     await this.page.locator('paper-icon-button[icon="delete"]').first().click({ force: true });
-    await this.page.locator('paper-button[role="button"]').filter({ hasText: /Confirmar|Confirm/i }).first().click();
-    await this.page.waitForTimeout(500);
+    await this.page.locator('paper-button[role="button"]').filter({ hasText: /Confirmar|Confirm/i }).first().click({ force: true });
+    await this.waitOverlayClosed();
   }
 }

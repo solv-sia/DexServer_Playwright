@@ -22,7 +22,7 @@ test.describe('Loguearse en el sistema con el usuario creado (ambos)', () => {
     // --- Login as OWNER user ---
     await page.goto(`${info.baseUrl}/DexFrontEnd/#!/login`, { waitUntil: 'domcontentloaded' });
     await loginPage.login(userOwner, info.passwordUserCP05PP);
-    await page.waitForTimeout(5000);
+    await globalPage.waitSpinner();
     await page.screenshot({ path: 'screenshots/cp07pp-owner-login.png' });
 
     await globalPage.clickAccountMenu();
@@ -32,7 +32,7 @@ test.describe('Loguearse en el sistema con el usuario creado (ambos)', () => {
     await loginPage.typeUsername(userNoOwner);
     await loginPage.typePassword(info.passwordUserCP05PP);
     await loginPage.clickLogin();
-    await page.waitForTimeout(5000);
+    await globalPage.waitSpinner();
     await page.screenshot({ path: 'screenshots/cp07pp-noowner-login.png' });
   });
 });

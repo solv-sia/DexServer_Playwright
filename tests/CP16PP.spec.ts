@@ -49,8 +49,9 @@ test.describe('Create LNL Group', () => {
     await groupDetailPage.completeTransmissionPolicySelect(config.LNLtransmissionPolicyName);
     await groupDetailPage.completeHardwarePolicySelect(config.LNLhardwarePolicyName);
     await groupDetailPage.clickSaveGroupBtn();
+    await globalPage.waitSpinner();
+    await globalPage.readInfoPopup(/Grupo guardado|Group saved/i);
     await page.screenshot({ path: 'screenshots/cp16pp_group.png' });
-    await page.waitForTimeout(5000);
 
     // Asignar player1 al grupo
     await networkPage.clearAndSearch(player1.machineName);
@@ -60,14 +61,17 @@ test.describe('Create LNL Group', () => {
     await networkDetailPage.setInheritedSchedule();
     await networkDetailPage.setInheritedTP();
     await networkDetailPage.setInheritedHP();
-    await networkDetailPage.decisionToSavePlayer();
-    await page.waitForTimeout(5000);
+    if (await networkDetailPage.decisionToSavePlayer()) {
+      await globalPage.readInfoPopup(/Player guardado|Player saved/i);
+    } else {
+      // Panel closed (values already matched) — reopen to assign group
+      await networkPage.clickResultingPlayer();
+    }
     await networkDetailPage.completePlayerGroupSelect(lonelyGroupName);
     await page.screenshot({ path: 'screenshots/cp16pp_player1.png' });
-    await networkDetailPage.decisionToSavePlayer();
-    await globalPage.readInfoPopup(/Player guardado|Player saved/i);
-    await page.waitForTimeout(5000);
-
+    if (await networkDetailPage.decisionToSavePlayer(false)) {
+      await globalPage.readInfoPopup(/Player guardado|Player saved/i);
+    }
     await networkDetailPage.validateInheritedValues({
       playlistName: config.LNLplaylistName,
       hardwarePolicyName: config.LNLhardwarePolicyName,
@@ -85,14 +89,17 @@ test.describe('Create LNL Group', () => {
     await networkDetailPage.setInheritedSchedule();
     await networkDetailPage.setInheritedTP();
     await networkDetailPage.setInheritedHP();
-    await networkDetailPage.decisionToSavePlayer();
-    await page.waitForTimeout(5000);
+    if (await networkDetailPage.decisionToSavePlayer()) {
+      await globalPage.readInfoPopup(/Player guardado|Player saved/i);
+    } else {
+      // Panel closed (values already matched) — reopen to assign group
+      await networkPage.clickResultingPlayer();
+    }
     await networkDetailPage.completePlayerGroupSelect(lonelyGroupName);
     await page.screenshot({ path: 'screenshots/cp16pp_player2.png' });
-    await networkDetailPage.decisionToSavePlayer();
-    await globalPage.readInfoPopup(/Player guardado|Player saved/i);
-    await page.waitForTimeout(5000);
-
+    if (await networkDetailPage.decisionToSavePlayer(false)) {
+      await globalPage.readInfoPopup(/Player guardado|Player saved/i);
+    }
     await networkDetailPage.validateInheritedValues({
       playlistName: config.LNLplaylistName,
       hardwarePolicyName: config.LNLhardwarePolicyName,
