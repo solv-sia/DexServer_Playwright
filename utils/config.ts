@@ -68,6 +68,8 @@ const config = {
   playerCP34PP: `${configJson.playerCP34PP} ${dateFormatter.datetime()}`,
   playerCP16PP1: `${configJson.playerCP16PP1} ${dateFormatter.datetime()}`,
   playerCP16PP2: `${configJson.playerCP16PP2} ${dateFormatter.datetime()}`,
+  playerCP20PP1: `${configJson.playerCP20PP1} ${dateFormatter.datetime()}`,
+  playerCP20PP2: `${configJson.playerCP20PP2} ${dateFormatter.datetime()}`,
   playerCP21PP1: `${configJson.playerCP21PP1} ${dateFormatter.datetime()}`,
   playerCP21PP2: `${configJson.playerCP21PP2} ${dateFormatter.datetime()}`,
   playerCP29PP1: `${configJson.playerCP29PP1} ${dateFormatter.datetime()}`,

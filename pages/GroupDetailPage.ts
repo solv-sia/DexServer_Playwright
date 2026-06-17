@@ -122,8 +122,8 @@ export class GroupDetailPage extends BasePage {
   async decisionConfirmPlayer() {
     try {
       await this.elements.confirmDialog().waitFor({ state: 'visible', timeout: 10000 });
-      await this.elements.confirmBtn().dispatchEvent('click');
-      await this.page.waitForTimeout(500);
+      await this.elements.confirmBtn().click({ force: true });
+      await this.elements.confirmDialog().waitFor({ state: 'hidden', timeout: 8000 }).catch(() => {});
     } catch {
       // No confirmation dialog appeared — player was not in another group
     }

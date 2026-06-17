@@ -8,15 +8,27 @@ import { loginWithSession } from '../utils/loginWithSession';
 import { NetworkPage } from '../pages/NetworkPage';
 import { NetworkDetailPage } from '../pages/NetworkDetailPage';
 import { GroupDetailPage } from '../pages/GroupDetailPage';
+import { createPlayer, deletePlayer } from '../utils/automationApi';
 
 test.use({ storageState: { cookies: [], origins: [] } });
 
-const syncGroupName = 'Grupo Sincronizado Automation ' + dateFormatter.datetime();
-
 test.describe('Create SYNC Group', () => {
+  const cleanupIds: number[] = [];
+
+  test.afterAll(async () => {
+    for (const id of cleanupIds) await deletePlayer(id).catch(() => {});
+  });
+
   test('@CP20PP', async ({ page }) => {
     test.setTimeout(300000);
 
+    const syncGroupName = 'Grupo Sincronizado Automation ' + dateFormatter.datetime();
+
+    const [player1, player2] = await Promise.all([
+      createPlayer(config.tenantActivationKeyCP16PP, config.playerCP20PP1),
+      createPlayer(config.tenantActivationKeyCP16PP, config.playerCP20PP2),
+    ]);
+    cleanupIds.push(player1.machineId, player2.machineId);
 
     const globalPage = new GlobalPage(page);
     const networkPage = new NetworkPage(page);
@@ -43,19 +55,20 @@ test.describe('Create SYNC Group', () => {
 
     setSharedData('groupCP20PP', syncGroupName);
 
-    await groupDetailPage.completeChannelOneSelect(config.player1);
+    await groupDetailPage.completeChannelOneSelect(player1.machineName);
     await groupDetailPage.decisionConfirmPlayer();
-    await groupDetailPage.completeChannelTwoSelect(config.player2);
+    await groupDetailPage.completeChannelTwoSelect(player2.machineName);
     await groupDetailPage.decisionConfirmPlayer();
 
     await groupDetailPage.clickSaveGroupBtn();
+    await globalPage.waitSpinner();
     await page.screenshot({ path: 'screenshots/cp20pp_group.png' });
 
     // Validar player1
     await networkPage.clearAndSearch(syncGroupName);
     await page.screenshot({ path: 'screenshots/cp20pp_search_group.png' });
 
-    await networkPage.clearAndSearch(config.player1);
+    await networkPage.clearAndSearch(player1.machineName);
     await networkPage.clickResultingPlayer();
     await networkDetailPage.validateInheritedValues({
       playlistName: config.syncPlaylistName,
@@ -69,7 +82,7 @@ test.describe('Create SYNC Group', () => {
     await globalPage.waitSpinner();
 
     // Validar player2
-    await networkPage.clearAndSearch(config.player2);
+    await networkPage.clearAndSearch(player2.machineName);
     await networkPage.clickResultingPlayer();
     await networkDetailPage.validateInheritedValues({
       playlistName: config.syncPlaylistName,
