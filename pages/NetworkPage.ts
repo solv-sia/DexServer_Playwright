@@ -42,6 +42,7 @@ export class NetworkPage extends BasePage {
   };
 
   async clearAndSearch(name: string) {
+    await this.page.locator('#dexNetworkList').waitFor({ state: 'attached', timeout: 60000 });
     const input = this.elements.searchInput();
     await input.dispatchEvent('click');
     await input.fill('', { force: true });
@@ -142,7 +143,12 @@ export class NetworkPage extends BasePage {
     expect(count).toBeGreaterThan(0);
   }
 
-  async clickGroupPlaylistAnalyzerBtn() { await this.elements.groupPlaylistAnalyzerBtn().first().click({ force: true }); }
+  async clickGroupPlaylistAnalyzerBtn() {
+    const group = this.page.locator('#dexNetworkList dex-network-display-view dex-network-group').first();
+    await group.hover();
+    await this.elements.groupPlaylistAnalyzerBtn().first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+    await this.elements.groupPlaylistAnalyzerBtn().first().click({ force: true });
+  }
 
   async clickSuperFilterPopUp()           { await this.elements.superFilterPopUp().click(); }
   async clickSuperFilterApplyBtn()        { await this.elements.superFilterApplyBtn().click(); }

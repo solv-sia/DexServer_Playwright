@@ -24,7 +24,7 @@ test.describe('Activar mas players que licencias activas en el tenant', () => {
     const globalPage = new GlobalPage(page);
     const networkPage = new NetworkPage(page);
 
-    await loginWithSession(page, config.userName, config.password, config.tenant31);
+    await loginWithSession(page, config.userName3, config.password);
 
     await globalPage.clickNetwork();
     await globalPage.waitSpinner();

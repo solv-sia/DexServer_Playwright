@@ -1,6 +1,6 @@
 {
   "useTestRail": false,
-  "testRunId": 1039,
+  "testRunId": 1048,
   "testRailProject": "dexserver",
   "clientName": "ARG - QA Automation",
   "clientNameFiltros": "ARG - QA Automation Filtros",
@@ -49,6 +49,8 @@
   "playerCP29PP2": "Player CP29PP 2",
   "playerCP30PP1": "Player CP30PP 1",
   "playerCP30PP2": "Player CP30PP 2",
+  "playerCP35PP1": "Player CP35PP 1",
+  "playerCP35PP2": "Player CP35PP 2",
   "playerCP38PP": "Player CP38PP",
   "playerCP19PP": "Player CP19PP",
   "playerCP22PP": "Player CP22PP",

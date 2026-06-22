@@ -147,7 +147,12 @@ export class GlobalPage extends BasePage {
   async clickPlaylist()                   { await this.waitOverlayClosed(); await this.elements.playlistIcon().click(); }
   async clickOnPlaylistHeader()           { await this.waitOverlayClosed(); await this.elements.playlistHeader().click(); }
   async clickSchedule()                   { await this.waitOverlayClosed(); await this.elements.scheduleIcon().click(); }
-  async clickNetwork()                    { await this.waitOverlayClosed(); await this.elements.networkIcon().click(); }
+  async clickNetwork() {
+    await this.waitOverlayClosed();
+    const icon = this.elements.networkIcon();
+    await icon.waitFor({ state: 'attached', timeout: 30000 }).catch(() => {});
+    await icon.click();
+  }
   async clickOnNetworkHeader()            { await this.waitOverlayClosed(); await this.elements.networkIcon().click(); }
   async clickOnHardwarePolicyHeader()     { await this.waitOverlayClosed(); await this.elements.hardwarePolicyHeader().dispatchEvent('click'); }
   async clickOnTransmissionPolicyHeader() { await this.waitOverlayClosed(); await this.elements.transmissionPolicyHeader().dispatchEvent('click'); }

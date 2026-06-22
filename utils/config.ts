@@ -14,6 +14,7 @@ const config = {
 
   userName: 'testermation',
   userName2: 'testermation2',
+  userName3: 'testermation3',
   password: 'QA!2023+',
 
   clientName: configJson.clientName,
@@ -76,6 +77,8 @@ const config = {
   playerCP29PP2: `${configJson.playerCP29PP2} ${dateFormatter.datetime()}`,
   playerCP30PP1: `${configJson.playerCP30PP1} ${dateFormatter.datetime()}`,
   playerCP30PP2: `${configJson.playerCP30PP2} ${dateFormatter.datetime()}`,
+  playerCP35PP1: `${configJson.playerCP35PP1} ${dateFormatter.datetime()}`,
+  playerCP35PP2: `${configJson.playerCP35PP2} ${dateFormatter.datetime()}`,
   playerCP38PP: `${configJson.playerCP38PP} ${dateFormatter.datetime()}`,
   tenant31: configJson.tenant31,
   tenantActivationKeyCP11PP: configJson.tenantActivationKeyCP11PP,

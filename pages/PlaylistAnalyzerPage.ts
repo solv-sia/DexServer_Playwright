@@ -31,7 +31,37 @@ export class PlaylistAnalyzerPage extends BasePage {
   }
 
   async clickPlaylistAnalyzerCloseBtn() {
-    await this.page.keyboard.press('Escape');
-    await this.page.waitForTimeout(800);
+    await this.page.evaluate(() => {
+      function findInShadow(root: Document | ShadowRoot, sel: string): any {
+        const el = root.querySelector(sel);
+        if (el) return el;
+        for (const e of Array.from(root.querySelectorAll('*'))) {
+          const sr = (e as any).shadowRoot;
+          if (sr) { const f = findInShadow(sr, sel); if (f) return f; }
+        }
+        return null;
+      }
+      const pa = findInShadow(document, '#dexPlaylistAnalyzer') as any;
+      if (!pa) return;
+      if (typeof pa._close === 'function') pa._close();
+      pa.opened = false;
+      pa.removeAttribute('opened');
+    });
+    // Wait for the overlay to stop intercepting pointer events
+    await this.page.waitForFunction(() => {
+      function findInShadow(root: Document | ShadowRoot, sel: string): any {
+        const el = root.querySelector(sel);
+        if (el) return el;
+        for (const e of Array.from(root.querySelectorAll('*'))) {
+          const sr = (e as any).shadowRoot;
+          if (sr) { const f = findInShadow(sr, sel); if (f) return f; }
+        }
+        return null;
+      }
+      const pa = findInShadow(document, '#dexPlaylistAnalyzer');
+      if (!pa) return true;
+      const box = (pa as Element).getBoundingClientRect();
+      return box.width === 0 || box.height === 0 || !pa.hasAttribute('opened');
+    }, { timeout: 8000 }).catch(() => {});
   }
 }

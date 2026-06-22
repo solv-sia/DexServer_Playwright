@@ -31,7 +31,7 @@ export class GroupDetailPage extends BasePage {
     const input = combo.locator('input');
     const overlay = this.page.locator('vaadin-combo-box-overlay[opened]');
     await overlay.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
-    await input.click({ force: true });
+    await input.dispatchEvent('click');
     await input.fill(value, { force: true });
     // Wait for filtered overlay — catch so a slow server doesn't abort the whole form
     await overlay.waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});

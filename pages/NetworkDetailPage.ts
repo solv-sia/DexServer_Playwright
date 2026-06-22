@@ -375,7 +375,7 @@ export class NetworkDetailPage extends BasePage {
     }
   }
 
-  async clickPlaylistAnalyzerBtn() { await this.elements.playlistAnalyzerBtn().click(); }
+  async clickPlaylistAnalyzerBtn() { await this.elements.playlistAnalyzerBtn().dispatchEvent('click'); }
 
   async validateTagValue(tagName: string) {
     await this.waitForDetailPanel();

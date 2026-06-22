@@ -80,6 +80,7 @@ test.describe('Create Transmission Policy', () => {
 
     // Asignar política al grupo
     await globalPage.clickNetwork();
+    await globalPage.waitSpinner();
     await networkPage.clearAndSearch(syncGroupName);
     await networkPage.clickResultingGroup();
     await groupDetailPage.completeTransmissionPolicySelect(transmissionPolicyName);
@@ -96,6 +97,7 @@ test.describe('Create Transmission Policy', () => {
 
     // Validar herencia en player2
     await globalPage.clickNetwork();
+    await globalPage.waitSpinner();
     await networkPage.clearAndSearch(player2.machineName);
     await networkPage.clickResultingPlayer();
     await networkDetailPage.validateInheritedValues({ transmissionPolicyName });

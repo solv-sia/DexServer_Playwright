@@ -79,6 +79,7 @@ test.describe('Create HW Policy', () => {
 
     // Asignar política al grupo
     await globalPage.clickNetwork();
+    await globalPage.waitSpinner();
     await networkPage.clearAndSearch(syncGroupName);
     await networkPage.clickResultingGroup();
     await groupDetailPage.completeHardwarePolicySelect(hardwarePolicyName);
