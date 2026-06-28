@@ -1,4 +1,4 @@
-import { Page } from '@playwright/test';
+import { Page, expect } from '@playwright/test';
 import { BasePage } from './BasePage';
 
 export class GeneralPage extends BasePage {
@@ -26,9 +26,29 @@ export class GeneralPage extends BasePage {
     }
   }
 
+  private escapeRegex(s: string): string {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
   private async selectInOpenedCombo(value: string) {
-    for (let attempt = 0; attempt < 20; attempt++) {
-      const hasMatch = await this.page.evaluate((val) => {
+    const escaped = this.escapeRegex(value);
+
+    // Primary: click via ARIA role — getByRole pierces shadow DOM, works for vaadin-combo-box-item
+    const option = this.page.locator('vaadin-combo-box-overlay[opened]')
+      .getByRole('option')
+      .filter({ hasText: new RegExp(escaped, 'i') })
+      .first();
+    const clicked = await option.waitFor({ state: 'visible', timeout: 8000 })
+      .then(() => option.click().then(() => true))
+      .catch(() => false);
+    if (clicked) return;
+
+    // Fallback: JS property assignment via filteredItems (server-side combos or when overlay click fails).
+    // Crucially, require a real match — never silently fall back to the first item, which would
+    // assign the wrong playlist/policy and only surface much later as an inheritance mismatch.
+    let hasMatch = false;
+    for (let attempt = 0; attempt < 40; attempt++) {
+      hasMatch = await this.page.evaluate((val) => {
         function findInShadow(root: Document | ShadowRoot, sel: string): Element | null {
           const el = root.querySelector(sel);
           if (el) return el;
@@ -48,6 +68,11 @@ export class GeneralPage extends BasePage {
       if (hasMatch) break;
       await this.page.waitForTimeout(150);
     }
+
+    if (!hasMatch) {
+      throw new Error(`vaadin-combo: item matching "${value}" not found via role=option or filteredItems after 8s`);
+    }
+
     await this.page.evaluate((val) => {
       function findInShadow(root: Document | ShadowRoot, sel: string): Element | null {
         const el = root.querySelector(sel);
@@ -64,7 +89,7 @@ export class GeneralPage extends BasePage {
       const match = filtered.find((i: any) => {
         const label = typeof i === 'string' ? i : (i.label || String(i.value ?? ''));
         return label.toLowerCase().includes(val.toLowerCase());
-      }) ?? filtered[0] ?? (vaadinCombo.items || [])[0];
+      });
       if (!match) return;
       vaadinCombo.selectedItem = match;
       vaadinCombo.opened = false;
@@ -98,9 +123,21 @@ export class GeneralPage extends BasePage {
   }
 
   async completePlaylistSelect(playlistName: string) {
+    const combo = this.elements.playlistCombo();
+    const input = combo.locator('input');
+    // The playlist combo is the only one with a clear (X) button. Clear any prior
+    // selection first so the new value filters a clean list — but only if the button
+    // is actually present, and wait for the field to empty before refilling so we
+    // don't type into a value that's mid-clear.
     const clearBtn = this.elements.playlistClearBtn();
-    await clearBtn.dispatchEvent('click');
-    await this.fillVaadinCombo(this.elements.playlistCombo(), playlistName);
+    if (await clearBtn.isVisible().catch(() => false)) {
+      await clearBtn.click({ force: true });
+      await expect(input).toHaveValue('', { timeout: 5000 }).catch(() => {});
+    }
+    await this.fillVaadinCombo(combo, playlistName);
+    // Guard against a silent wrong pick: the input must end up reflecting the requested
+    // playlist. If it doesn't, fail here instead of much later at the inheritance check.
+    await expect(input).toHaveValue(new RegExp(this.escapeRegex(playlistName), 'i'), { timeout: 8000 });
   }
 
   async completeScheduleSelect(scheduleName: string) {

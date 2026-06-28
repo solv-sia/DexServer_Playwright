@@ -1,5 +1,5 @@
 // Configurar ajustes a nivel tenant y validar herencia en players
-import { test } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import config from '../utils/config';
 import { GlobalPage } from '../pages/GlobalPage';
 import { loginWithSession } from '../utils/loginWithSession';
@@ -71,18 +71,24 @@ test.describe('Set up tenant configuration and validate inheritance', () => {
     await page.screenshot({ path: 'screenshots/cp14pp_b.png' });
     await page.waitForTimeout(5000);
 
-    // Validar herencia en el player
-    await globalPage.clickNetwork();
-    await globalPage.waitSpinner();
-    await networkPage.clearAndSearch(player.machineName);
-    await networkPage.clickResultingPlayer();
-    await networkDetailPage.validateInheritedValues({
-      playlistName: config.playlistNameToInherit,
-      hardwarePolicyName: config.hardwarePolicyNameToInherit,
-      transmissionPolicyName: config.transmissionPolicyNameToInherit,
-      scheduleName: config.scheduleNameToInherit,
-      timeZone: config.timeZoneToInherit,
-    });
+    // Validar herencia en el player.
+    // La propagación de los ajustes del tenant al player es eventual: a veces el
+    // detalle aún muestra los valores viejos justo después de guardar. Reabrimos el
+    // player y revalidamos hasta que aparezcan los valores heredados (igual que la
+    // prueba manual, donde basta con volver a abrirlo un instante después).
+    await expect(async () => {
+      await globalPage.clickNetwork();
+      await globalPage.waitSpinner();
+      await networkPage.clearAndSearch(player.machineName);
+      await networkPage.clickResultingPlayer();
+      await networkDetailPage.validateInheritedValues({
+        playlistName: config.playlistNameToInherit,
+        hardwarePolicyName: config.hardwarePolicyNameToInherit,
+        transmissionPolicyName: config.transmissionPolicyNameToInherit,
+        scheduleName: config.scheduleNameToInherit,
+        timeZone: config.timeZoneToInherit,
+      });
+    }).toPass({ timeout: 90000, intervals: [3000, 5000, 5000, 8000, 8000] });
     await page.screenshot({ path: 'screenshots/cp14pp_c.png' });
   });
 });
