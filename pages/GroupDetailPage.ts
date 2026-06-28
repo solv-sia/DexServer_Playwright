@@ -31,14 +31,35 @@ export class GroupDetailPage extends BasePage {
     const input = combo.locator('input');
     const overlay = this.page.locator('vaadin-combo-box-overlay[opened]');
     await overlay.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
-    await input.dispatchEvent('click');
+
+    // Click to trigger async item loading (items may be 0 right after dialog opens)
+    await input.click({ force: true });
     await input.fill(value, { force: true });
-    // Wait for filtered overlay — catch so a slow server doesn't abort the whole form
     await overlay.waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
-    await input.press('ArrowDown');
-    await input.press('Enter');
+
+    // Wait until items are loaded AND a matching item exists (handles server-side async fetch)
+    for (let i = 0; i < 100; i++) {
+      const selected = await combo.evaluate((el: any, val: string) => {
+        const labelPath = el.itemLabelPath;
+        // items.length === 0 means async fetch not yet complete — keep waiting
+        const allItems: any[] = el.items || [];
+        if (allItems.length === 0) return false;
+        const searchIn: any[] = el.filteredItems?.length ? el.filteredItems : allItems;
+        const match = searchIn.find((item: any) => {
+          const label = typeof item === 'string' ? item
+            : String(labelPath ? (item[labelPath] ?? '') : (item.label || item.name || item.Name || ''));
+          return label.toLowerCase().includes(val.toLowerCase());
+        });
+        if (!match) return false;
+        el.selectedItem = match;
+        el.opened = false;
+        return true;
+      }, value);
+      if (selected) break;
+      await this.page.waitForTimeout(100);
+    }
     await overlay.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
-    await this.page.waitForTimeout(200);
+    await this.page.waitForTimeout(300);
   }
 
   async completeGroupNameInput(groupName: string) {

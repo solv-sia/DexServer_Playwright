@@ -22,7 +22,7 @@ export class GlobalPage extends BasePage {
     errorToastLabel:      () => this.findElement({ get: '#errorToast', find: ['#label'] }),
     playlistIcon:         () => this.findElement({ get: '.playlist-color', find: ['#icon'] }),
     scheduleIcon:         () => this.findElement({ get: '.schedules-color', find: ['#icon'] }),
-    networkIcon:              () => this.findElement({ get: '.network-color', find: ['#icon'] }),
+    networkIcon:              () => this.findElement({ get: 'dex-app', find: ["[name='master']", '#dexHeader', "paper-icon-button.network-color[icon='device:devices']"] }),
     hardwarePolicyHeader:     () => this.findElement({ get: 'dex-app', find: ["[name='master']", '#dexHeader', ".network-color[icon='settings-remote']"] }),
     transmissionPolicyHeader: () => this.findElement({ get: 'dex-app', find: ["[name='master']", '#dexHeader', ".network-color[icon='settings-input-antenna']"] }),
     mediaLibraryHeader:       () => this.findElement({ get: 'dex-app', find: ["[name='master']", '#dexHeader', ".media-color[icon='perm-media']"], eq: 0 }),
@@ -151,9 +151,9 @@ export class GlobalPage extends BasePage {
     await this.waitOverlayClosed();
     const icon = this.elements.networkIcon();
     await icon.waitFor({ state: 'attached', timeout: 30000 }).catch(() => {});
-    await icon.click();
+    await icon.dispatchEvent('click');
   }
-  async clickOnNetworkHeader()            { await this.waitOverlayClosed(); await this.elements.networkIcon().click(); }
+  async clickOnNetworkHeader()            { await this.waitOverlayClosed(); await this.elements.networkIcon().dispatchEvent('click'); }
   async clickOnHardwarePolicyHeader()     { await this.waitOverlayClosed(); await this.elements.hardwarePolicyHeader().dispatchEvent('click'); }
   async clickOnTransmissionPolicyHeader() { await this.waitOverlayClosed(); await this.elements.transmissionPolicyHeader().dispatchEvent('click'); }
   async clickOptionGeneral()              { await this.waitOverlayClosed(); await this.elements.optionGeneral().click(); }

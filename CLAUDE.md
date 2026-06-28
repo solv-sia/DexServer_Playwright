@@ -54,6 +54,32 @@ Each page class has a private `elements` object of locator factory functions and
 ### Common Patterns
 
 - Use `{ force: true }` on fills/clicks for web components that intercept pointer events
-- Call `globalPage.waitSpinner()` after any action that triggers a loading state — it waits for `#main` to reach `display: block`
+- Call `globalPage.waitSpinner()` after any action that triggers a loading state — it waits for `#dexloader #main` to reach `display: none`
 - Screenshots are captured manually at key points; the config also records video at 1920×1080
 - Path aliases `@pages/*` and `@utils/*` are configured in `tsconfig.json` — use them instead of relative imports
+
+### Navigation & Click Anti-patterns
+
+**`DEX-APP` covers the viewport on non-root sections** (`#!/hardware-control`, `#!/settings/*`, etc.). Playwright's `.click()` uses `elementFromPoint()` to verify the target — if `DEX-APP` is the topmost element at the click coordinates, the click waits indefinitely and times out. Always use `dispatchEvent('click')` for header navigation icons. Exception: elements explicitly inside overlays/dialogs that float above `DEX-APP`.
+
+**Never click the inner `#icon` of a `paper-icon-button` to trigger navigation.** The `#icon` lives inside the button's shadow root; a `dispatchEvent('click')` on it does not cross the shadow boundary to reach the `<a>` wrapper that triggers hash-based routing. Always target `paper-icon-button` directly. The `networkIcon` locator in `GlobalPage` uses the full shadow-piercing chain: `dex-app >> [name='master'] >> #dexHeader >> paper-icon-button.network-color[icon='device:devices']`.
+
+**Page methods that submit forms must wait for the dialog/overlay to close.** Clicking a confirm/save button and returning immediately creates a race condition: the next action (search, navigation) may run before the server responds and the dialog dismisses. Pattern:
+```ts
+await this.elements.confirmButton().dispatchEvent('click');
+await this.dialog().waitFor({ state: 'hidden', timeout: 15000 });
+```
+Then call `globalPage.waitSpinner()` in the test spec after the submit method returns, before any search or navigation that depends on the submitted data existing.
+
+**`waitOverlayClosed()` in BasePage has a `.catch(() => {})` safety net** — it never throws, it just continues if the overlay doesn't close in time. Do not rely on it as proof that a dialog has fully closed; use explicit `waitFor({ state: 'hidden' })` on the dialog itself.
+
+### Known Navigation URL Map
+
+| `clickOn*Header()` method | Navigates to |
+|---------------------------|--------------|
+| `clickOnNetworkHeader()` / `clickNetwork()` | `#!/network` |
+| `clickOnHardwarePolicyHeader()` | `#!/hardware-control` — **`#dexNetworkList` does NOT exist here** |
+| `clickOnTransmissionPolicyHeader()` | `#!/transmission-policy` |
+| `clickOnMediaLibraryHeader()` | `#!/media-library` |
+
+When on `#!/hardware-control`, `page.locator('#dexNetworkList')` returns 0 matches. Any `NetworkPage` method called without first navigating to `#!/network` will timeout. Always call `globalPage.clickNetwork()` + `globalPage.waitSpinner()` before `NetworkPage` methods.

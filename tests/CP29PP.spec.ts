@@ -60,17 +60,19 @@ test.describe('Create HW Policy', () => {
     await groupDetailPage.completeChannelTwoSelect(player2.machineName);
     await groupDetailPage.decisionConfirmPlayer();
     await groupDetailPage.clickSaveGroupBtn();
+    await globalPage.waitSpinner();
 
     // Crear política de hardware
     await globalPage.clickOnNetworkHeader();
     await globalPage.waitSpinner();
     await globalPage.clickOnHardwarePolicyHeader();
-    await page.waitForTimeout(5000);
-    
+    await globalPage.waitSpinner();
+
     await hwPolicyPage.clickOnCreateHardwarePolicy();
     await hwPolicyPage.nameHardwarePolicy(hardwarePolicyName);
     await hwPolicyPage.setRebootTime(config.rebootTime);
     await hwPolicyPage.clickOnSavePolicyBtn();
+    await globalPage.waitSpinner();
 
     setSharedData('policyCP29PP', hardwarePolicyName);
 
@@ -83,7 +85,9 @@ test.describe('Create HW Policy', () => {
     await networkPage.clearAndSearch(syncGroupName);
     await networkPage.clickResultingGroup();
     await groupDetailPage.completeHardwarePolicySelect(hardwarePolicyName);
+    await page.waitForTimeout(1000);
     await groupDetailPage.clickSaveGroupBtn();
+    await globalPage.waitSpinner();
     await page.screenshot({ path: 'screenshots/cp29pp_group.png' });
 
     // Validar herencia en player1
@@ -96,6 +100,7 @@ test.describe('Create HW Policy', () => {
 
     // Validar herencia en player2
     await globalPage.clickNetwork();
+    await globalPage.waitSpinner();
     await networkPage.clearAndSearch(player2.machineName);
     await networkPage.clickResultingPlayer();
     await networkDetailPage.validateInheritedValues({ hardwarePolicyName });

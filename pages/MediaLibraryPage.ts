@@ -497,9 +497,28 @@ export class MediaLibraryPage extends BasePage {
 
   async clickOnReplacementMedia(mediaName: string) {
     const baseName = mediaName.replace(/\.[^/.]+$/, '');
-    const card = this.page.locator('div.mediaCardC').filter({ hasText: baseName }).first();
-    await card.waitFor({ state: 'visible', timeout: 15000 });
-    await card.click();
+    // Wait for any card to be in DOM (Playwright pierces shadow DOM)
+    await this.page.locator('div.mediaCardC').first()
+      .waitFor({ state: 'attached', timeout: 15000 });
+    // JS click via shadow-piercing findAll — same pattern as other methods here.
+    // iron-list sets off-viewport cards to display:none so Playwright .click()
+    // times out; native el.click() fires the event regardless of visibility.
+    const clicked = await this.page.evaluate((name: string) => {
+      function findAll(root: Document | ShadowRoot, sel: string): HTMLElement[] {
+        const items = Array.from(root.querySelectorAll(sel)) as HTMLElement[];
+        for (const el of root.querySelectorAll('*')) {
+          const sr = (el as any).shadowRoot;
+          if (sr) items.push(...findAll(sr, sel));
+        }
+        return items;
+      }
+      const match = findAll(document, 'div.mediaCardC')
+        .find(el => (el.textContent ?? '').includes(name));
+      if (match) { match.click(); return true; }
+      return false;
+    }, baseName);
+    if (!clicked) throw new Error(`Media card not found: ${baseName}`);
+    await this.page.waitForTimeout(300);
   }
 
   async clickContinueBtn() {

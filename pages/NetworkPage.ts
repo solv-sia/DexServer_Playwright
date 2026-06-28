@@ -100,6 +100,8 @@ export class NetworkPage extends BasePage {
     await group.hover();
     await this.elements.resultingGroup().first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
     await this.elements.resultingGroup().first().click({ force: true });
+    await this.page.locator('#dexNetworkList #multiEditData paper-dialog#multiEdit')
+      .waitFor({ state: 'visible', timeout: 10000 });
   }
   async clickMoreBtn()         { await this.elements.moreBtn().click(); }
   async clickGroupBtn()        { await this.elements.groupBtn().click(); }

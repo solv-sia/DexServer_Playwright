@@ -30,6 +30,7 @@ test.describe('Crear SuperTenant y activarlo', () => {
     await customerPage.typeNameSuperInput(superCustomerName);
     await customerPage.typeCustomer(config.clientName);
     await customerPage.clickConfirmButton();
+    await globalPage.waitSpinner();
 
     await customerPage.typeSearchInput(superCustomerName);
     await customerPage.clickToogle();

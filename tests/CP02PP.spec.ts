@@ -32,6 +32,7 @@ test.describe('Crear cliente y activarlo', () => {
     await customerPage.typeIntermalId('8293');
     await customerPage.typeOwnerMailInput('testermation@gmail.com');
     await customerPage.clickConfirmButton();
+    await globalPage.waitSpinner();
 
     await customerPage.typeSearchInput(customerName);
     await customerPage.clickToogle();

@@ -36,7 +36,10 @@ export class HardwarePolicyPage extends BasePage {
     await this.elements.rebootInput().fill(time, { force: true });
   }
 
-  async clickOnSavePolicyBtn() { await this.elements.saveBtn().click(); }
+  async clickOnSavePolicyBtn() {
+    await this.elements.saveBtn().dispatchEvent('click');
+    await this.dialog().waitFor({ state: 'hidden', timeout: 15000 });
+  }
 
   async searchPolicy(policyName: string) {
     await this.elements.searchbar().click();
