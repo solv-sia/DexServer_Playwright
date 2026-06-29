@@ -55,7 +55,10 @@ test.describe('Aprobar player manualmente CP11PP', () => {
 
     await networkDetailPage.completePlayerGroupSelect(config.nameGroup);
     await networkDetailPage.clickSave();
-    await globalPage.readInfoPopup(/Player guardado|Player saved/i);
+    // Verify the assignment via UI state, not the save toast: the "Player guardado" toast
+    // is unreliable here (one-at-a-time toasts; "Display creado" suppresses it) even though
+    // the group assignment auto-saves successfully.
+    await networkDetailPage.verifyPlayerGroup(config.nameGroup);
 
     await page.screenshot({ path: 'screenshots/cp11pp.png' });
 

@@ -251,6 +251,16 @@ export class NetworkDetailPage extends BasePage {
     await infoToast.waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
   }
 
+  // Deterministic check that the player ended up assigned to the given group. Preferred
+  // over reading the save toast: the app's "Player guardado" toast is shown one-at-a-time
+  // and gets suppressed by a still-visible "Display creado" toast, so it's an unreliable
+  // signal even though the save itself succeeds.
+  async verifyPlayerGroup(groupName: string) {
+    await this.waitForDetailPanel();
+    await expect(this.elements.groupInput())
+      .toHaveValue(new RegExp(this.escapeRegex(groupName), 'i'), { timeout: 10000 });
+  }
+
   async setInheritedPLDefault() {
     await this.fillPlaylistCombo(this.elements.plDefaultCombo(), 'heredado');
   }
