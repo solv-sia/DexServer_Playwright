@@ -27,6 +27,10 @@ export class GroupDetailPage extends BasePage {
     confirmBtn:             () => this.page.locator('#dexNetworkList #multiEditData #confirmDialog .buttons paper-button').filter({ hasText: /confirm(ar)?/i }),
   };
 
+  private escapeRegex(s: string): string {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
   private async fillVaadinCombo(combo: ReturnType<typeof this.page.locator>, value: string) {
     const input = combo.locator('input');
     const overlay = this.page.locator('vaadin-combo-box-overlay[opened]');
@@ -37,26 +41,32 @@ export class GroupDetailPage extends BasePage {
     await input.fill(value, { force: true });
     await overlay.waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
 
-    // Wait until items are loaded AND a matching item exists (handles server-side async fetch)
+    // Wait until items are loaded AND a matching item is rendered (handles server-side async fetch)
     for (let i = 0; i < 100; i++) {
-      const selected = await combo.evaluate((el: any, val: string) => {
+      const ready = await combo.evaluate((el: any, val: string) => {
         const labelPath = el.itemLabelPath;
-        // items.length === 0 means async fetch not yet complete — keep waiting
         const allItems: any[] = el.items || [];
         if (allItems.length === 0) return false;
         const searchIn: any[] = el.filteredItems?.length ? el.filteredItems : allItems;
-        const match = searchIn.find((item: any) => {
+        return searchIn.some((item: any) => {
           const label = typeof item === 'string' ? item
             : String(labelPath ? (item[labelPath] ?? '') : (item.label || item.name || item.Name || ''));
           return label.toLowerCase().includes(val.toLowerCase());
         });
-        if (!match) return false;
-        el.selectedItem = match;
-        el.opened = false;
-        return true;
       }, value);
-      if (selected) break;
+      if (ready) break;
       await this.page.waitForTimeout(100);
+    }
+
+    // Commit by clicking the matching overlay item — a native click fires the value-changed
+    // event the group dialog binds to. Programmatic selectedItem assignment set the text but
+    // did NOT commit, so saved groups ended up without the selected playlist/schedule/policy.
+    const option = overlay.locator('vaadin-combo-box-item')
+      .filter({ hasText: new RegExp(this.escapeRegex(value), 'i') }).first();
+    if (await option.isVisible().catch(() => false)) {
+      await option.click();
+    } else {
+      await input.press('Enter');
     }
     await overlay.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
     await this.page.waitForTimeout(300);

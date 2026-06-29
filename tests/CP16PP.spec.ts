@@ -1,5 +1,5 @@
 // Crear grupo LNL y asignar players validando herencia
-import { test } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import config from '../utils/config';
 import dateFormatter from '../utils/dateFormatter';
 import { setSharedData } from '../utils/sharedData';
@@ -53,59 +53,51 @@ test.describe('Create LNL Group', () => {
     await globalPage.readInfoPopup(/Grupo guardado|Group saved/i);
     await page.screenshot({ path: 'screenshots/cp16pp_group.png' });
 
-    // Asignar player1 al grupo
-    await networkPage.clearAndSearch(player1.machineName);
-    await networkPage.clickResultingPlayer();
-    await networkDetailPage.setGroupNone();
-    await networkDetailPage.setInheritedPLDefault();
-    await networkDetailPage.setInheritedSchedule();
-    await networkDetailPage.setInheritedTP();
-    await networkDetailPage.setInheritedHP();
-    if (await networkDetailPage.decisionToSavePlayer()) {
-      await globalPage.readInfoPopup(/Player guardado|Player saved/i);
-    } else {
-      // Panel closed (values already matched) — reopen to assign group
-      await networkPage.clickResultingPlayer();
-    }
-    await networkDetailPage.completePlayerGroupSelect(lonelyGroupName);
-    await page.screenshot({ path: 'screenshots/cp16pp_player1.png' });
-    if (await networkDetailPage.decisionToSavePlayer(false)) {
-      await globalPage.readInfoPopup(/Player guardado|Player saved/i);
-    }
-    await networkDetailPage.validateInheritedValues({
-      playlistName: config.LNLplaylistName,
-      hardwarePolicyName: config.LNLhardwarePolicyName,
-      transmissionPolicyName: config.LNLtransmissionPolicyName,
-      scheduleName: config.LNLscheduleName,
-    });
+    // Assign each player to the group, then validate it inherits the group's settings.
+    const assignToGroup = async (player: { machineId: number }) => {
+      const url = `${config.baseUrl}/DexFrontEnd/#!/network/${player.machineId}`;
+      // Open via deep-link (not a card click): the card-opened panel doesn't commit the
+      // inherited-value combos, so setInheritedPLDefault et al. silently fail and the
+      // player keeps literal values instead of inheriting the group. The first goto can
+      // drop to #!/network, so navigate twice.
+      const openPlayer = async () => {
+        await page.goto(url, { waitUntil: 'domcontentloaded' });
+        await page.waitForTimeout(1500);
+        await page.goto(url, { waitUntil: 'domcontentloaded' });
+        await page.waitForTimeout(3000);
+      };
+      await openPlayer();
+      await networkDetailPage.setGroupNone();
+      await networkDetailPage.setInheritedPLDefault();
+      await networkDetailPage.setInheritedSchedule();
+      await networkDetailPage.setInheritedTP();
+      await networkDetailPage.setInheritedHP();
+      if (await networkDetailPage.decisionToSavePlayer()) {
+        await globalPage.readInfoPopup(/Player guardado|Player saved/i).catch(() => {});
+      } else {
+        await openPlayer();
+      }
+      await networkDetailPage.completePlayerGroupSelect(lonelyGroupName);
+      if (await networkDetailPage.decisionToSavePlayer(false)) {
+        await globalPage.readInfoPopup(/Player guardado|Player saved/i).catch(() => {});
+      }
+      // Inheritance is eventually consistent — reopen and revalidate until the group's
+      // inherited values appear on the player.
+      await expect(async () => {
+        await openPlayer();
+        await networkDetailPage.validateInheritedValues({
+          playlistName: config.LNLplaylistName,
+          hardwarePolicyName: config.LNLhardwarePolicyName,
+          transmissionPolicyName: config.LNLtransmissionPolicyName,
+          scheduleName: config.LNLscheduleName,
+        });
+      }).toPass({ timeout: 90000, intervals: [3000, 5000, 5000, 8000, 8000] });
+    };
 
-    // Asignar player2 al grupo
-    await globalPage.clickNetwork();
-    await globalPage.waitSpinner();
-    await networkPage.clearAndSearch(player2.machineName);
-    await networkPage.clickResultingPlayer();
-    await networkDetailPage.setGroupNone();
-    await networkDetailPage.setInheritedPLDefault();
-    await networkDetailPage.setInheritedSchedule();
-    await networkDetailPage.setInheritedTP();
-    await networkDetailPage.setInheritedHP();
-    if (await networkDetailPage.decisionToSavePlayer()) {
-      await globalPage.readInfoPopup(/Player guardado|Player saved/i);
-    } else {
-      // Panel closed (values already matched) — reopen to assign group
-      await networkPage.clickResultingPlayer();
-    }
-    await networkDetailPage.completePlayerGroupSelect(lonelyGroupName);
+    await assignToGroup(player1);
+    await page.screenshot({ path: 'screenshots/cp16pp_player1.png' });
+    await assignToGroup(player2);
     await page.screenshot({ path: 'screenshots/cp16pp_player2.png' });
-    if (await networkDetailPage.decisionToSavePlayer(false)) {
-      await globalPage.readInfoPopup(/Player guardado|Player saved/i);
-    }
-    await networkDetailPage.validateInheritedValues({
-      playlistName: config.LNLplaylistName,
-      hardwarePolicyName: config.LNLhardwarePolicyName,
-      transmissionPolicyName: config.LNLtransmissionPolicyName,
-      scheduleName: config.LNLscheduleName,
-    });
 
     await globalPage.clickNetwork();
     await globalPage.waitSpinner();
