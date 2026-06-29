@@ -63,6 +63,9 @@ const config = {
   automationApiToken: process.env.AUTOMATION_API_TOKEN ?? '',
   automationApiDbKey: process.env.AUTOMATION_API_DB_KEY ?? 'demo5',
 
+  // Dexaut QA API (heartbeat-by-machine, reads the player's configured HB state)
+  dexautUrl: process.env.DEXAUT_URL ?? 'https://dexaut.dexmanager.com',
+
   // CP11PP+
   playerCP11PP: `${configJson.playerCP11PP} ${dateFormatter.datetime()}`,
   playerCP14PP: `${configJson.playerCP14PP} ${dateFormatter.datetime()}`,

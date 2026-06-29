@@ -22,6 +22,7 @@ export class NetworkDetailPage extends BasePage {
     timeZoneCombo:     () => this.page.locator('dex-network-display-detail#dexNetworkDetail paper-icon-item:has(iron-icon[icon="schedule"]) vaadin-combo-box').nth(1),
     tagCombo:          () => this.page.locator('dex-network-display-detail#dexNetworkDetail paper-icon-item:has(iron-icon[icon="label"]) vaadin-combo-box'),
     versionInput:      () => this.page.locator('dex-network-display-detail#dexNetworkDetail paper-icon-item:has(iron-icon[icon="image:filter-2"])').nth(1).locator('vaadin-combo-box input'),
+    versionCombo:      () => this.page.locator('dex-network-display-detail#dexNetworkDetail paper-icon-item:has(iron-icon[icon="image:filter-2"])').nth(1).locator('vaadin-combo-box'),
     versionLabel:      () => this.page.locator('paper-icon-item').filter({ hasText: /Versión actual|Current version/i }).locator('div.device-img + span'),
     playerNameInput:   () => this.page.locator('dex-network-display-detail#dexNetworkDetail paper-input.flex.input-name').locator('input'),
     saveButton:        () => this.page.locator("dex-network-display-detail#dexNetworkDetail paper-icon-button[title='Guardar'], dex-network-display-detail#dexNetworkDetail paper-icon-button[title='Save']"),
@@ -285,6 +286,47 @@ export class NetworkDetailPage extends BasePage {
   async getCurrentVersion(): Promise<string> {
     const text = await this.elements.versionLabel().textContent();
     return (text ?? '').trim();
+  }
+
+  // Selects a firmware version in the "version to install" combo and saves it. Recipe
+  // (verified against the live app): clear, type the version slowly, let the combo filter
+  // to the single matching option, then click that option (NOT ArrowDown+Enter — ArrowDown
+  // moves the highlight off the option and commits an empty value), and click Save
+  // IMMEDIATELY — the Save button only stays enabled for a brief window after the version
+  // commits, so any delay re-disables it and the change is lost. Returns once the save
+  // toast confirms persistence. NOTE: the panel must be opened via deep-link URL
+  // (#!/network/<id>); a card-opened panel binds this combo so it never commits.
+  async setVersionToInstall(version: string) {
+    await this.waitForDetailPanel();
+    const input = this.elements.versionCombo().locator('input');
+    const saveBtn = this.elements.saveButton();
+    const infoToast = this.page.locator('#infoToast');
+    const matcher = new RegExp(this.escapeRegex(version), 'i');
+
+    for (let attempt = 0; attempt < 4; attempt++) {
+      // Clear any stale toast so the success check below can't read a previous one.
+      await infoToast.waitFor({ state: 'hidden', timeout: 2000 }).catch(() => {});
+      await input.click();
+      await input.press('Control+a');
+      await input.press('Delete');
+      await this.page.waitForTimeout(300);
+      await input.pressSequentially(version, { delay: 110 });
+      // Let the combo filter down to the single matching option before committing.
+      await this.page.waitForTimeout(1200);
+      // Click the matching dropdown option with a real mouse click (commits the value);
+      // fall back to Enter if the option isn't rendered.
+      const option = this.page.locator('vaadin-combo-box-overlay[opened] vaadin-combo-box-item')
+        .filter({ hasText: matcher }).first();
+      if (await option.isVisible().catch(() => false)) await option.click();
+      else await input.press('Enter');
+      // Click Save right away, within the brief window the button stays enabled.
+      await saveBtn.click({ force: true });
+
+      const saved = await infoToast.waitFor({ state: 'visible', timeout: 6000 })
+        .then(() => true).catch(() => false);
+      if (saved) return;
+      await this.page.waitForTimeout(800);
+    }
   }
 
   private async waitForInputValue(locator: ReturnType<typeof this.page.locator>, timeout = 8000): Promise<string> {

@@ -3,9 +3,8 @@ import { test, expect } from '@playwright/test';
 import config from '../utils/config';
 import { GlobalPage } from '../pages/GlobalPage';
 import { loginWithSession } from '../utils/loginWithSession';
-import { NetworkPage } from '../pages/NetworkPage';
 import { NetworkDetailPage } from '../pages/NetworkDetailPage';
-import { createPlayer, deletePlayer } from '../utils/automationApi';
+import { createPlayer, deletePlayer, getHeartBeatByMachineId } from '../utils/automationApi';
 
 test.use({ storageState: { cookies: [], origins: [] } });
 
@@ -23,36 +22,33 @@ test.describe('Actualizar la version de los players (probar downgrade y upgrade)
     cleanupIds.push(player.machineId);
 
     const globalPage = new GlobalPage(page);
-    const networkPage = new NetworkPage(page);
     const networkDetailPage = new NetworkDetailPage(page);
 
     await loginWithSession(page, config.userName2, config.password);
 
     await globalPage.clickNetwork();
     await globalPage.waitSpinner();
-    await networkPage.clearAndSearch(player.machineName);
-     await page.waitForTimeout(3000);
-    await networkPage.clickResultingPlayer();
-
-    const hbUrl = `${config.baseUrl}/DexFrontend/api/v3/heartBeatSync/${player.machineId}/${player.messageKey}`;
+    // Open the player detail via deep-link URL (not a card click). The card-opened panel
+    // binds the version combo differently and never commits the change; the URL-opened
+    // one does. The first goto can drop to #!/network, so navigate twice.
+    const playerUrl = `${config.baseUrl}/DexFrontEnd/#!/network/${player.machineId}`;
+    await page.goto(playerUrl, { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(2000);
+    await page.goto(playerUrl, { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(4000);
 
     const setVersionAndVerifyHB = async (targetVersion: string) => {
-      const versionInput = networkDetailPage['elements'].versionInput();
-      await versionInput.fill(targetVersion, { force: true });
-      await versionInput.press('ArrowDown');
-      await versionInput.press('Enter');
-      await networkDetailPage.clickSave();
-      await globalPage.readInfoPopup(/Player guardado|Player saved/i);
-      await page.waitForTimeout(5000);
+      // setVersionToInstall selects the version and clicks Save (within the brief enabled window).
+      await networkDetailPage.setVersionToInstall(targetVersion);
+      await page.waitForTimeout(3000);
 
       let latestVersion = '';
       let lastHbData: Record<string, unknown> = {};
 
+      // Read the heartbeat via the dexaut QA endpoint, which surfaces the player's
+      // configured "version to install" as LatestVersion.
       for (let i = 0; i < 10; i++) {
-        const hbData: Record<string, unknown> = await page.evaluate(async (url) => {
-          const res = await fetch(url, { method: 'POST' });
-          return res.json();
-        }, hbUrl);
+        const hbData = await getHeartBeatByMachineId(player.machineId);
 
         lastHbData = hbData;
         latestVersion = String(hbData['LatestVersion'] ?? '');
@@ -66,16 +62,12 @@ test.describe('Actualizar la version de los players (probar downgrade y upgrade)
       ).toBe(targetVersion);
     };
 
-    const initialHb: Record<string, unknown> = await page.evaluate(async (url) => {
-      const res = await fetch(url, { method: 'POST' });
-      return res.json();
-    }, hbUrl);
-    const currentVersion = String(initialHb['LatestVersion'] ?? '');
-
-    // Always start with whichever version differs from the current one
-    const [firstVersion, secondVersion] = currentVersion === config.previousVersion
-      ? [config.latestVersion, config.previousVersion]
-      : [config.previousVersion, config.latestVersion];
+    // The player is born displaying the handshake version (config.previousVersion,
+    // 6.4.2408.2600) in the "version to install" combo. Install the OTHER version first
+    // (latestVersion) so it's a real change the combo commits, then previousVersion —
+    // now also a real change (latest -> previous downgrade).
+    const firstVersion = config.latestVersion;
+    const secondVersion = config.previousVersion;
 
     await setVersionAndVerifyHB(firstVersion);
     await page.screenshot({ path: 'screenshots/cp22pp_step1.png' });

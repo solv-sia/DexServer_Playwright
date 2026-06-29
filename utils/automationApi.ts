@@ -122,6 +122,56 @@ export async function deletePlayer(machineId: number): Promise<void> {
   }
 }
 
+// --- Dexaut QA heartbeat API -------------------------------------------------
+// The direct DexFrontend `heartBeatSync` endpoint, when polled with an empty body,
+// recomputes LatestVersion against a missing reported version and returns
+// 0.0.0000.0000 even when the player has a "version to install" configured. The
+// dexaut QA endpoint instead reads the player's stored HB state, so it surfaces the
+// configured install version as LatestVersion. Requires a bearer token from login.
+
+let dexautToken: string | null = null;
+
+async function getDexautToken(): Promise<string> {
+  if (dexautToken) return dexautToken;
+  const res = await fetch(`${config.dexautUrl}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'User-Agent': 'InDClient/1.0.0' },
+    body: JSON.stringify({ user: config.userName, password: config.password }),
+  });
+  if (!res.ok) {
+    throw new Error(`dexaut login failed: ${res.status} ${await res.text()}`);
+  }
+  const data = await res.json() as Record<string, unknown>;
+  const token = data['token'] as string | undefined;
+  if (!token) {
+    throw new Error(`dexaut login: no token in response: ${JSON.stringify(data)}`);
+  }
+  dexautToken = token;
+  return token;
+}
+
+// Returns the stored heartbeat payload for a machine (same shape as heartBeatSync).
+export async function getHeartBeatByMachineId(machineId: number): Promise<Record<string, unknown>> {
+  const token = await getDexautToken();
+  const res = await fetch(`${config.dexautUrl}/QA/getHearBeatByMachineID`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'User-Agent': 'InDClient/1.0.0',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ playerID: machineId }),
+  });
+  if (!res.ok) {
+    throw new Error(`getHeartBeatByMachineId failed: ${res.status} ${await res.text()}`);
+  }
+  const data = await res.json() as Record<string, unknown>;
+  if (!data['success']) {
+    throw new Error(`getHeartBeatByMachineId: response not successful: ${JSON.stringify(data)}`);
+  }
+  return data['data'] as Record<string, unknown>;
+}
+
 export async function getMachine(serialNumber: string): Promise<MachineInfo> {
   const res = await fetch(
     `${config.automationApiUrl}/api/machine/${config.automationApiDbKey}/${encodeURIComponent(serialNumber)}`,
