@@ -339,11 +339,18 @@ export class NetworkDetailPage extends BasePage {
     }
   }
 
-  private async waitForInputValue(locator: ReturnType<typeof this.page.locator>, timeout = 8000): Promise<string> {
+  private async waitForInputValue(
+    locator: ReturnType<typeof this.page.locator>,
+    timeout = 8000,
+    contains?: string,
+  ): Promise<string> {
     const deadline = Date.now() + timeout;
     while (Date.now() < deadline) {
       const val = await locator.inputValue().catch(() => '');
-      if (val.length > 0) return val;
+      const ready = contains
+        ? val.toLowerCase().includes(contains.toLowerCase())
+        : val.length > 0;
+      if (ready) return val;
       await this.page.waitForTimeout(300);
     }
     return await locator.inputValue().catch(() => '');
@@ -389,23 +396,23 @@ export class NetworkDetailPage extends BasePage {
     await this.dismissConfirmDialog();
     await this.waitForDetailPanel();
     if (playlistName) {
-      const val = await this.waitForInputValue(this.elements.plDefaultInput());
+      const val = await this.waitForInputValue(this.elements.plDefaultInput(), 15000, playlistName);
       this.assertInherited(val, playlistName);
     }
     if (scheduleName) {
-      const val = await this.waitForInputValue(this.elements.scheduleInput());
+      const val = await this.waitForInputValue(this.elements.scheduleInput(), 15000, scheduleName);
       this.assertInherited(val, scheduleName);
     }
     if (hardwarePolicyName) {
-      const val = await this.waitForInputValue(this.elements.hpCombo().locator('input'));
+      const val = await this.waitForInputValue(this.elements.hpCombo().locator('input'), 15000, hardwarePolicyName);
       this.assertInherited(val, hardwarePolicyName);
     }
     if (transmissionPolicyName) {
-      const val = await this.waitForInputValue(this.elements.tpCombo().locator('input'));
+      const val = await this.waitForInputValue(this.elements.tpCombo().locator('input'), 15000, transmissionPolicyName);
       this.assertInherited(val, transmissionPolicyName);
     }
     if (timeZone) {
-      const val = await this.waitForInputValue(this.elements.timeZoneCombo().locator('input'));
+      const val = await this.waitForInputValue(this.elements.timeZoneCombo().locator('input'), 15000, timeZone);
       this.assertInherited(val, timeZone);
     }
     if (storeName) {
