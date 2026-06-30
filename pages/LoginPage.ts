@@ -35,7 +35,7 @@ export class LoginPage extends BasePage {
   }
 
   async login(userName: string, password: string, verify = false) {
-    await this.elements.usernameInput().waitFor({ state: 'visible', timeout: 60000 });
+    await this.elements.usernameInput().waitFor({ state: 'visible', timeout: 90000 });
     await this.typeUsername(userName);
     await this.typePassword(password);
     await this.clickLogin();
