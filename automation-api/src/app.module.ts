@@ -11,7 +11,7 @@ import { WideEventMiddleware } from './logger/wide-event.middleware';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, envFilePath: 'src/.env' }),
     ...(process.env.MONGO_URI ? [MongooseModule.forRoot(process.env.MONGO_URI)] : []),
     SqlServerModule,
     MachineModule,

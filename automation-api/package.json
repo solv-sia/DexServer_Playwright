@@ -4,8 +4,8 @@
   "description": "Automation API - Servicio para envio de resultados a TestRail",
   "main": "dist/main.js",
   "scripts": {
-    "dev": "nodemon --exec \"node -r dotenv/config -r ts-node/register src/main.ts\" --ext ts --watch src",
-    "start": "node -r dotenv/config -r ts-node/register src/main.ts",
+    "dev": "nodemon --exec \"node -r ts-node/register src/main.ts\" --ext ts --watch src",
+    "start": "node -r ts-node/register src/main.ts",
     "build": "tsc",
     "start:prod": "node dist/main.js"
   },
