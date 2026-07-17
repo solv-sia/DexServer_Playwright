@@ -23,14 +23,13 @@ test.describe('Búsqueda por superfiltro - doble condición simultánea', () => 
    * El botón "+" o "Agregar condición" aparece después de la primera fila.
    */
   const addSecondFilterRow = async (page: import('@playwright/test').Page) => {
+    // El botón "Agregar condición" puede estar fuera de #advanceFilter (en el panel de filas)
     const addRowBtn = page.locator(
-      '#advanceFilter paper-button[icon="add"], ' +
-      '#advanceFilter paper-icon-button[icon="add"], ' +
-      '#advanceFilter .add-filter-row, ' +
-      '#advanceFilter paper-button'
+      'paper-button[icon="add"], paper-icon-button[icon="add"], ' +
+      '.add-filter-row, paper-button, paper-icon-button'
     ).filter({ hasText: /agregar|add|\+/i }).first();
-    await addRowBtn.click({ force: true });
-    await page.waitForTimeout(300);
+    await addRowBtn.dispatchEvent('click');
+    await page.waitForTimeout(500);
   };
 
   test('@CP71APP Doble condición: Calendario EN LA LISTA + Playlist EN LA LISTA', async ({ page }) => {

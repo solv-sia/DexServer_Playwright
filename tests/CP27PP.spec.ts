@@ -33,14 +33,14 @@ test.describe('Replace media', () => {
     await playlistPage.clickConfirmButton();
     await playlistPage.typeNamePlaylistInput(playlistName);
 
-    // Double navigation ensures clean component state before the first drag
+    // La doble navegación asegura un estado limpio del componente antes del primer drag
     await playlistPage.buscarRuta(config.ruta);
     await playlistPage.ubicarSubcarpetaFinal(config.ruta);
     await playlistPage.buscarRuta(config.ruta);
     await playlistPage.ubicarSubcarpetaFinal(config.ruta);
     await playlistPage.moveMediaToChannel(1, mediaToReplace);
 
-    // After drag the folder cards stay visible — re-navigation would reset the view to search results
+    // Después del drag las tarjetas de carpeta siguen visibles — renavegar resetearía la vista a resultados de búsqueda
     await playlistPage.moveMediaToChannel(2, extraMedia);
 
     await playlistPage.clickSaveButton();

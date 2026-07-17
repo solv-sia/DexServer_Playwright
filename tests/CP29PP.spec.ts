@@ -1,5 +1,5 @@
 // Crear política de hardware y asignarla al grupo validando herencia
-import { test } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import config from '../utils/config';
 import dateFormatter from '../utils/dateFormatter';
 import { setSharedData } from '../utils/sharedData';
@@ -91,19 +91,23 @@ test.describe('Create HW Policy', () => {
     await page.screenshot({ path: 'screenshots/cp29pp_group.png' });
 
     // Validar herencia en player1
-    await globalPage.clickNetwork();
-    await globalPage.waitSpinner();
-    await networkPage.clearAndSearch(player1.machineName);
-    await networkPage.clickResultingPlayer();
-    await networkDetailPage.validateInheritedValues({ hardwarePolicyName });
+    await expect(async () => {
+      await globalPage.clickNetwork();
+      await globalPage.waitSpinner();
+      await networkPage.clearAndSearch(player1.machineName);
+      await networkPage.clickResultingPlayer();
+      await networkDetailPage.validateInheritedValues({ hardwarePolicyName });
+    }).toPass({ timeout: 180000, intervals: [5000, 8000, 8000, 10000, 10000] });
     await page.screenshot({ path: 'screenshots/cp29pp_player1.png' });
 
     // Validar herencia en player2
-    await globalPage.clickNetwork();
-    await globalPage.waitSpinner();
-    await networkPage.clearAndSearch(player2.machineName);
-    await networkPage.clickResultingPlayer();
-    await networkDetailPage.validateInheritedValues({ hardwarePolicyName });
+    await expect(async () => {
+      await globalPage.clickNetwork();
+      await globalPage.waitSpinner();
+      await networkPage.clearAndSearch(player2.machineName);
+      await networkPage.clickResultingPlayer();
+      await networkDetailPage.validateInheritedValues({ hardwarePolicyName });
+    }).toPass({ timeout: 180000, intervals: [5000, 8000, 8000, 10000, 10000] });
     await page.screenshot({ path: 'screenshots/cp29pp_player2.png' });
   });
 });

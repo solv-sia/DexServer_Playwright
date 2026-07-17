@@ -66,7 +66,7 @@ test.describe('Create Transmission Policy', () => {
     await globalPage.clickOnNetworkHeader();
     await globalPage.waitSpinner();
     await globalPage.clickOnTransmissionPolicyHeader();
-    await page.waitForTimeout(5000);
+    await globalPage.waitSpinner();
 
     await trPolicyPage.clickOnCreateTRPolicyBtn();
     await trPolicyPage.nameTransmissionPolicy(transmissionPolicyName);

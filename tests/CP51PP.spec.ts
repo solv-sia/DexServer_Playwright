@@ -29,7 +29,7 @@ test.describe('Configurar media reemplazando tags y validar propagacion', () => 
     await mediaLibraryPage.clearInclusionTags();
     await mediaLibraryPage.clearProductTags();
 
-    // Set new tags
+    // Configurar nuevas etiquetas
     const inclusionInput = page.locator("dex-textarea-tags#inclusionInput vaadin-text-field input");
     await inclusionInput.fill('TAG_REEMPAZO', { force: true });
     await inclusionInput.press('Enter');

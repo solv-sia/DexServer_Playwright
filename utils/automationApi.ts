@@ -32,7 +32,7 @@ function buildHeaders(): Record<string, string> {
 // Crea un player headless vía doHandshake y resuelve los datos completos con getMachine.
 // activationKey puede ser null para devices virtuales (no usan el diálogo de activación UI).
 export async function createPlayer(tenantActivationKey: string, name?: string): Promise<CreatedPlayer> {
-  const maxAttempts = 3;
+  const maxAttempts = 5;
   let lastError: Error | undefined;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -70,13 +70,13 @@ export async function createPlayer(tenantActivationKey: string, name?: string): 
     } catch (err) {
       lastError = err as Error;
       if (attempt < maxAttempts) {
-        console.warn(`[createPlayer] attempt ${attempt}/${maxAttempts} failed: ${lastError.message} — retrying in 3s`);
-        await new Promise(r => setTimeout(r, 3000));
+        console.warn(`[createPlayer] attempt ${attempt}/${maxAttempts} failed: ${lastError.message} — retrying in 5s`);
+        await new Promise(r => setTimeout(r, 5000));
       }
     }
   }
 
-  throw lastError ?? new Error('createPlayer: all attempts failed');
+  throw new Error(`PRECONDICIÓN FALLIDA: No se pudo crear el player "${name ?? 'sin nombre'}" después de ${maxAttempts} intentos. Último error: ${lastError?.message ?? 'desconocido'}`);
 }
 
 export async function simulateDownloads(player: CreatedPlayer): Promise<void> {

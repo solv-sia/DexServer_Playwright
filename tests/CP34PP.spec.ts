@@ -35,15 +35,15 @@ test.describe('Verificar progreso de descargas', () => {
     await networkPage.clickResultingPlayer();
     await page.waitForTimeout(1000);
 
-    // Assign new PL default
+    // Asignar nueva playlist por defecto
     await networkDetailPage.setNewPlaylist(config.PL_CP34PP, config.PL_CP34PP);
     await networkDetailPage.decisionToSavePlayer();
-    await page.waitForTimeout(3000); // allow server to process the assignment
+    await page.waitForTimeout(3000); // permitir que el servidor procese la asignación
 
-    // Simulate download completion via automation-api (retries internally until DexServer creates the machine files)
+    // Simular descarga completa vía automation-api (reintenta internamente hasta que DexServer crea los archivos del player)
     await simulateDownloads(player);
 
-    // Verify UI shows 100% on all progress bars
+    // Verificar que la UI muestra 100% en todas las barras de progreso
     const progressBars = page.locator('.paper-material.display-info-container paper-progress');
     for (let i = 0; i < 5; i++) {
       await globalPage.clickNetwork();

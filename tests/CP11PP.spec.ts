@@ -26,7 +26,8 @@ test.describe('Aprobar player manualmente CP11PP', () => {
     ).toBeTruthy();
 
     const player = await createPlayer(config.tenantActivationKeyCP11PP);
-    cleanupIds.push(player.machineId);
+    // No se agrega a cleanupIds: CP40PP necesita este player más adelante en la suite.
+    // La limpieza se realiza en CP99BPP al final de la suite.
     expect(player.activationKey, 'El player debe tener ActivationKey para el diálogo de activación UI').toBeTruthy();
     const activationKey = player.activationKey!;
     const machineId = player.machineId;
@@ -55,9 +56,9 @@ test.describe('Aprobar player manualmente CP11PP', () => {
 
     await networkDetailPage.completePlayerGroupSelect(config.nameGroup);
     await networkDetailPage.clickSave();
-    // Verify the assignment via UI state, not the save toast: the "Player guardado" toast
-    // is unreliable here (one-at-a-time toasts; "Display creado" suppresses it) even though
-    // the group assignment auto-saves successfully.
+    // Se verifica la asignación por estado de UI, no por el toast: el toast "Player guardado"
+    // no es confiable aquí (los toasts son de uno a la vez; "Display creado" lo suprime)
+    // aunque la asignación al grupo se guarda correctamente de forma automática.
     await networkDetailPage.verifyPlayerGroup(config.nameGroup);
 
     await page.screenshot({ path: 'screenshots/cp11pp.png' });

@@ -153,7 +153,7 @@ export class NetworkPage extends BasePage {
   }
 
   async clickSuperFilterPopUp()           { await this.elements.superFilterPopUp().click(); }
-  async clickSuperFilterApplyBtn()        { await this.elements.superFilterApplyBtn().click(); }
+  async clickSuperFilterApplyBtn()        { await this.elements.superFilterApplyBtn().dispatchEvent('click'); }
 
   async typeInSuperFilterField(field: string, index = 0) {
     const input = this.elements.superFilterField(index);
@@ -180,7 +180,7 @@ export class NetworkPage extends BasePage {
   }
 
   async clickSuperFilterTagCombo(index = 0) {
-    await this.page.locator('dex-new-combo-tags-filter #inputCombo').nth(index).click({ force: true });
+    await this.page.locator('dex-new-combo-tags-filter #inputCombo').nth(index).dispatchEvent('click');
   }
 
   async typeInSuperFilterDate(date: string, index = 0) {

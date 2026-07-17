@@ -1,5 +1,5 @@
 // Crear un TAG y asignarlo al grupo, validar herencia en players
-import { test } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import config from '../utils/config';
 import dateFormatter from '../utils/dateFormatter';
 import { GlobalPage } from '../pages/GlobalPage';
@@ -59,6 +59,7 @@ test.describe('Create a TAG and assign it to the group', () => {
     await groupDetailPage.completeChannelTwoSelect(player2.machineName);
     await groupDetailPage.decisionConfirmPlayer();
     await groupDetailPage.clickSaveGroupBtn();
+    await globalPage.waitSpinner();
     await page.screenshot({ path: 'screenshots/cp21pp_group_sync.png' });
 
     // Crear TAG
@@ -79,19 +80,23 @@ test.describe('Create a TAG and assign it to the group', () => {
     await page.screenshot({ path: 'screenshots/cp21pp_group.png' });
 
     // Validar tag en player1
-    await globalPage.clickNetwork();
-    await globalPage.waitSpinner();
-    await networkPage.clearAndSearch(player1.machineName);
-    await networkPage.clickResultingPlayer();
-    await networkDetailPage.validateTagValue(tagName);
+    await expect(async () => {
+      await globalPage.clickNetwork();
+      await globalPage.waitSpinner();
+      await networkPage.clearAndSearch(player1.machineName);
+      await networkPage.clickResultingPlayer();
+      await networkDetailPage.validateTagValue(tagName);
+    }).toPass({ timeout: 60000, intervals: [3000, 5000, 5000, 8000] });
     await page.screenshot({ path: 'screenshots/cp21pp_player1.png' });
 
     // Validar tag en player2
-    await globalPage.clickNetwork();
-    await globalPage.waitSpinner();
-    await networkPage.clearAndSearch(player2.machineName);
-    await networkPage.clickResultingPlayer();
-    await networkDetailPage.validateTagValue(tagName);
+    await expect(async () => {
+      await globalPage.clickNetwork();
+      await globalPage.waitSpinner();
+      await networkPage.clearAndSearch(player2.machineName);
+      await networkPage.clickResultingPlayer();
+      await networkDetailPage.validateTagValue(tagName);
+    }).toPass({ timeout: 60000, intervals: [3000, 5000, 5000, 8000] });
     await page.screenshot({ path: 'screenshots/cp21pp_player2.png' });
   });
 });

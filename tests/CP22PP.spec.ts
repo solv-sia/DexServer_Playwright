@@ -28,9 +28,9 @@ test.describe('Actualizar la version de los players (probar downgrade y upgrade)
 
     await globalPage.clickNetwork();
     await globalPage.waitSpinner();
-    // Open the player detail via deep-link URL (not a card click). The card-opened panel
-    // binds the version combo differently and never commits the change; the URL-opened
-    // one does. The first goto can drop to #!/network, so navigate twice.
+    // Abrir el detalle del player vía deep-link (no por clic en tarjeta). El panel abierto desde tarjeta
+    // vincula el combo de versión de forma diferente y nunca confirma el cambio; el panel abierto
+    // por URL sí lo hace. El primer goto puede redirigir a #!/network, por eso se navega dos veces.
     const playerUrl = `${config.baseUrl}/DexFrontEnd/#!/network/${player.machineId}`;
     await page.goto(playerUrl, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(2000);
@@ -64,10 +64,10 @@ test.describe('Actualizar la version de los players (probar downgrade y upgrade)
       ).toBe(targetVersion);
     };
 
-    // The player is born displaying the handshake version (config.previousVersion,
-    // 6.4.2408.2600) in the "version to install" combo. Install the OTHER version first
-    // (latestVersion) so it's a real change the combo commits, then previousVersion —
-    // now also a real change (latest -> previous downgrade).
+    // El player nace mostrando la versión del handshake (config.previousVersion,
+    // 6.4.2408.2600) en el combo "versión a instalar". Se instala la OTRA versión primero
+    // (latestVersion) para que sea un cambio real que el combo confirme, luego previousVersion —
+    // ahora también un cambio real (downgrade de latest a previous).
     const firstVersion = config.latestVersion;
     const secondVersion = config.previousVersion;
 

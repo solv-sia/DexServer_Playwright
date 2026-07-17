@@ -5,7 +5,7 @@ import { getSharedData } from '../utils/sharedData';
 import { LoginPage } from '../pages/LoginPage';
 import { GlobalPage } from '../pages/GlobalPage';
 
-// CP07PP manually logs in with specific users — no storageState
+// CP07PP inicia sesión manualmente con usuarios específicos — sin storageState
 test.use({ storageState: { cookies: [], origins: [] } });
 
 test.describe('Loguearse en el sistema con el usuario creado (ambos)', () => {
@@ -19,7 +19,7 @@ test.describe('Loguearse en el sistema con el usuario creado (ambos)', () => {
     const loginPage = new LoginPage(page);
     const globalPage = new GlobalPage(page);
 
-    // --- Login as OWNER user ---
+    // --- Inicio de sesión como usuario OWNER ---
     await page.goto(`${info.baseUrl}/DexFrontEnd/#!/login`, { waitUntil: 'domcontentloaded' });
     await loginPage.login(userOwner, info.passwordUserCP05PP);
     await globalPage.waitSpinner();
@@ -28,7 +28,7 @@ test.describe('Loguearse en el sistema con el usuario creado (ambos)', () => {
     await globalPage.clickAccountMenu();
     await globalPage.clickLogout();
 
-    // --- Login as NO-OWNER user ---
+    // --- Inicio de sesión como usuario NO-OWNER ---
     await loginPage.typeUsername(userNoOwner);
     await loginPage.typePassword(info.passwordUserCP05PP);
     await loginPage.clickLogin();

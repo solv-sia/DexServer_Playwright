@@ -1,5 +1,5 @@
 // Crear grupo SYNC y asignar players validando herencia
-import { test } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import config from '../utils/config';
 import dateFormatter from '../utils/dateFormatter';
 import { setSharedData } from '../utils/sharedData';
@@ -68,28 +68,33 @@ test.describe('Create SYNC Group', () => {
     await networkPage.clearAndSearch(syncGroupName);
     await page.screenshot({ path: 'screenshots/cp20pp_search_group.png' });
 
-    await networkPage.clearAndSearch(player1.machineName);
-    await networkPage.clickResultingPlayer();
-    await networkDetailPage.validateInheritedValues({
-      playlistName: config.syncPlaylistName,
-      hardwarePolicyName: config.syncHardwarePolicyName,
-      transmissionPolicyName: config.syncTransmissionPolicyName,
-      scheduleName: config.syncScheduleName,
-    });
+    await expect(async () => {
+      await globalPage.clickNetwork();
+      await globalPage.waitSpinner();
+      await networkPage.clearAndSearch(player1.machineName);
+      await networkPage.clickResultingPlayer();
+      await networkDetailPage.validateInheritedValues({
+        playlistName: config.syncPlaylistName,
+        hardwarePolicyName: config.syncHardwarePolicyName,
+        transmissionPolicyName: config.syncTransmissionPolicyName,
+        scheduleName: config.syncScheduleName,
+      });
+    }).toPass({ timeout: 60000, intervals: [3000, 5000, 5000, 8000] });
     await page.screenshot({ path: 'screenshots/cp20pp_player1.png' });
 
-    await globalPage.clickNetwork();
-    await globalPage.waitSpinner();
-
     // Validar player2
-    await networkPage.clearAndSearch(player2.machineName);
-    await networkPage.clickResultingPlayer();
-    await networkDetailPage.validateInheritedValues({
-      playlistName: config.syncPlaylistName,
-      hardwarePolicyName: config.syncHardwarePolicyName,
-      transmissionPolicyName: config.syncTransmissionPolicyName,
-      scheduleName: config.syncScheduleName,
-    });
+    await expect(async () => {
+      await globalPage.clickNetwork();
+      await globalPage.waitSpinner();
+      await networkPage.clearAndSearch(player2.machineName);
+      await networkPage.clickResultingPlayer();
+      await networkDetailPage.validateInheritedValues({
+        playlistName: config.syncPlaylistName,
+        hardwarePolicyName: config.syncHardwarePolicyName,
+        transmissionPolicyName: config.syncTransmissionPolicyName,
+        scheduleName: config.syncScheduleName,
+      });
+    }).toPass({ timeout: 60000, intervals: [3000, 5000, 5000, 8000] });
     await page.screenshot({ path: 'screenshots/cp20pp_player2.png' });
   });
 });

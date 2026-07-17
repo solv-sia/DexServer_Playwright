@@ -2,6 +2,7 @@
 import { test } from '@playwright/test';
 import config from '../utils/config';
 import { getSharedData } from '../utils/sharedData';
+import { deletePlayer } from '../utils/automationApi';
 import { GlobalPage } from '../pages/GlobalPage';
 import { loginWithSession } from '../utils/loginWithSession';
 import { NetworkPage } from '../pages/NetworkPage';
@@ -42,7 +43,7 @@ test.describe('Limpieza suite: eliminar elementos creados', () => {
       try {
         await mediaLibraryPage.deleteMediaFromLibrary(file);
       } catch {
-        // file may not exist
+        // el archivo puede no existir
       }
     }
 
@@ -59,15 +60,19 @@ test.describe('Limpieza suite: eliminar elementos creados', () => {
 
     const syncGroup = getSharedData('groupCP20PP');
     if (syncGroup) {
-      try { await networkPage.deleteGroup(syncGroup); } catch { /* group may not exist */ }
+      try { await networkPage.deleteGroup(syncGroup); } catch { /* el grupo puede no existir */ }
     }
 
     await page.waitForTimeout(1000);
 
     const lonelyGroup = getSharedData('groupCP16PP');
     if (lonelyGroup) {
-      try { await networkPage.deleteGroup(lonelyGroup); } catch { /* group may not exist */ }
+      try { await networkPage.deleteGroup(lonelyGroup); } catch { /* el grupo puede no existir */ }
     }
+
+    // Eliminar el player de CP11PP (no se limpia en afterAll porque CP40PP lo necesita durante la suite)
+    const machineIdCP11PP = getSharedData('machineIdCP11PP');
+    if (machineIdCP11PP) await deletePlayer(Number(machineIdCP11PP)).catch(() => {});
 
     await page.screenshot({ path: 'screenshots/cp99bpp.png' });
   });
@@ -83,7 +88,7 @@ test.describe('Limpieza suite: eliminar elementos creados', () => {
 
     const hwPolicy = getSharedData('policyCP29PP');
     if (hwPolicy) {
-      try { await hwPolicyPage.deletePolicy(hwPolicy); } catch { /* may not exist */ }
+      try { await hwPolicyPage.deletePolicy(hwPolicy); } catch { /* puede no existir */ }
     }
 
     await page.screenshot({ path: 'screenshots/cp99cpp.png' });
@@ -100,7 +105,7 @@ test.describe('Limpieza suite: eliminar elementos creados', () => {
 
     const trPolicy = getSharedData('policyCP30PP');
     if (trPolicy) {
-      try { await trPolicyPage.deletePolicy(trPolicy); } catch { /* may not exist */ }
+      try { await trPolicyPage.deletePolicy(trPolicy); } catch { /* puede no existir */ }
     }
 
     await page.screenshot({ path: 'screenshots/cp99dpp.png' });
@@ -116,7 +121,7 @@ test.describe('Limpieza suite: eliminar elementos creados', () => {
 
     const schedule = getSharedData('ScheudleCP13PP');
     if (schedule) {
-      try { await schedulePage.deleteSchedule(schedule); } catch { /* may not exist */ }
+      try { await schedulePage.deleteSchedule(schedule); } catch { /* puede no existir */ }
     }
 
     await page.screenshot({ path: 'screenshots/cp99epp.png' });
@@ -132,11 +137,11 @@ test.describe('Limpieza suite: eliminar elementos creados', () => {
 
     const playlist = getSharedData('PlaylistCP10PP');
     if (playlist) {
-      try { await playlistPage.deletePlaylist(playlist); } catch { /* may not exist */ }
+      try { await playlistPage.deletePlaylist(playlist); } catch { /* puede no existir */ }
     }
 
     for (const plName of [config.calendarPL, config.PL_CP34PP]) {
-      try { await playlistPage.deletePlaylist(plName); } catch { /* may not exist */ }
+      try { await playlistPage.deletePlaylist(plName); } catch { /* puede no existir */ }
     }
 
     await page.screenshot({ path: 'screenshots/cp99fpp.png' });
@@ -154,7 +159,7 @@ test.describe('Limpieza suite: eliminar elementos creados', () => {
 
     const layout = getSharedData('layoutCP09PP');
     if (layout) {
-      try { await layoutPage.deleteLayout(layout); } catch { /* may not exist */ }
+      try { await layoutPage.deleteLayout(layout); } catch { /* puede no existir */ }
     }
 
     await page.screenshot({ path: 'screenshots/cp99gpp.png' });
@@ -172,7 +177,7 @@ test.describe('Limpieza suite: eliminar elementos creados', () => {
     for (const key of ['userCP05PP', 'userCP06PP']) {
       const username = getSharedData(key);
       if (username) {
-        try { await userPage.deleteUser(username); } catch { /* may not exist */ }
+        try { await userPage.deleteUser(username); } catch { /* puede no existir */ }
       }
     }
 
@@ -190,7 +195,7 @@ test.describe('Limpieza suite: eliminar elementos creados', () => {
 
     const role = getSharedData('roleCP04PP');
     if (role) {
-      try { await rolePage.deleteRole(role); } catch { /* may not exist */ }
+      try { await rolePage.deleteRole(role); } catch { /* puede no existir */ }
     }
 
     await page.screenshot({ path: 'screenshots/cp99ipp.png' });
@@ -207,7 +212,7 @@ test.describe('Limpieza suite: eliminar elementos creados', () => {
 
     const customer = getSharedData('customerCP02PP');
     if (customer) {
-      try { await customerPage.deleteCustomer(customer); } catch { /* may not exist */ }
+      try { await customerPage.deleteCustomer(customer); } catch { /* puede no existir */ }
     }
 
     await page.screenshot({ path: 'screenshots/cp99jpp.png' });

@@ -25,12 +25,12 @@ test.describe('Configurar media con tags y validar propagacion', () => {
     await mediaLibraryPage.clickOnMedia(config.mediaToChange);
     await page.waitForTimeout(500);
 
-    // Set inclusion tag
+    // Configurar etiqueta de inclusión
     const inclusionInput = page.locator("dex-textarea-tags#inclusionInput vaadin-text-field input");
     await inclusionInput.fill('REPRODUCIR', { force: true });
     await inclusionInput.press('Enter');
 
-    // Set exclusion tag
+    // Configurar etiqueta de exclusión
     const exclusionInput = page.locator("dex-textarea-tags#exclusionInput vaadin-text-field input");
     await exclusionInput.fill('NO REPRODUCIR', { force: true });
     await exclusionInput.press('Enter');

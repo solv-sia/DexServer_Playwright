@@ -28,22 +28,22 @@ test.describe('Configurar media y validar cambios de fecha', () => {
     await mediaLibraryPage.clickOnMedia(config.mediaToChange);
     await page.waitForTimeout(500);
 
-    // Set every days checkbox
+    // Marcar todos los días
     await mediaLibraryPage.setEveryDaysCheckboxState(true);
 
-    // Set hours from/to
+    // Configurar horas desde/hasta
     await mediaLibraryPage.clearFromHourInput();
     await page.locator("paper-input.flex.input").nth(0).locator("input[autocomplete='off']").fill('14:00', { force: true });
     await mediaLibraryPage.clearToHourInput();
     await page.locator("paper-input.flex.input").nth(1).locator("input[autocomplete='off']").fill('18:00', { force: true });
 
-    // Set recurrence hours
+    // Configurar horas de recurrencia
     await mediaLibraryPage.clearFromHourRecurenceInput();
     await page.locator("paper-input.flex.input").nth(2).locator("input[autocomplete='off']").fill('15:00', { force: true });
     await mediaLibraryPage.clearToHourRecurenceInput();
     await page.locator("paper-input.flex.input").nth(3).locator("input[autocomplete='off']").fill('16:00', { force: true });
 
-    // Set from/to date to today
+    // Configurar fecha desde/hasta como hoy
     await page.locator("dex-date-picker.input-datepicker").nth(0).locator("paper-input[aria-disabled='false']").click({ force: true });
     await page.locator('.datepicker-content').nth(0).locator('div[today=""]').click();
     await page.locator("dex-date-picker.input-datepicker").nth(1).locator("paper-input[aria-disabled='false']").click({ force: true });

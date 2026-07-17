@@ -32,7 +32,7 @@ test.describe('Remove media', () => {
     await playlistPage.clickConfirmButton();
     await playlistPage.typeNamePlaylistInput(playlistName);
 
-    // Double navigation ensures clean component state before the first drag
+    // La doble navegación asegura un estado limpio del componente antes del primer drag
     await playlistPage.buscarRuta(ruta);
     await playlistPage.ubicarSubcarpetaFinal(ruta);
     await playlistPage.buscarRuta(ruta);

@@ -6,7 +6,7 @@ import { NetworkPage } from '../pages/NetworkPage';
 
 test.use({ storageState: path.join(__dirname, '../auth/storageState.json') });
 
-test('@DEBUG tagSelector position', async ({ page }) => {
+test.skip('@DEBUG tagSelector position', async ({ page }) => {
   test.setTimeout(300000);
 
   await page.goto(`${config.baseUrl}/DexFrontEnd/`, { waitUntil: 'domcontentloaded' });

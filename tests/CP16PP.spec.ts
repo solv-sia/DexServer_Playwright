@@ -53,13 +53,13 @@ test.describe('Create LNL Group', () => {
     await globalPage.waitSpinner();
     await page.screenshot({ path: 'screenshots/cp16pp_group.png' });
 
-    // Assign each player to the group, then validate it inherits the group's settings.
+    // Asignar cada player al grupo y validar que hereda la configuración del grupo.
     const assignToGroup = async (player: { machineId: number }) => {
       const url = `${config.baseUrl}/DexFrontEnd/#!/network/${player.machineId}`;
-      // Open via deep-link (not a card click): the card-opened panel doesn't commit the
-      // inherited-value combos, so setInheritedPLDefault et al. silently fail and the
-      // player keeps literal values instead of inheriting the group. The first goto can
-      // drop to #!/network, so navigate twice.
+      // Navegar vía deep-link (no por clic en tarjeta): el panel abierto desde tarjeta no confirma
+      // los combos de valores heredados, por lo que setInheritedPLDefault y similares fallan silenciosamente
+      // y el player conserva valores literales en lugar de heredar del grupo. El primer goto puede
+      // redirigir a #!/network, por eso se navega dos veces.
       const openPlayer = async () => {
         await page.goto(url, { waitUntil: 'domcontentloaded' });
         await page.waitForTimeout(1500);
@@ -81,8 +81,8 @@ test.describe('Create LNL Group', () => {
       if (await networkDetailPage.decisionToSavePlayer(false)) {
         await globalPage.readInfoPopup(/Player guardado|Player saved/i).catch(() => {});
       }
-      // Inheritance is eventually consistent — reopen and revalidate until the group's
-      // inherited values appear on the player.
+      // La herencia es eventualmente consistente — reabrir y revalidar hasta que los valores
+      // heredados del grupo aparezcan en el player.
       await expect(async () => {
         await openPlayer();
         await networkDetailPage.validateInheritedValues({

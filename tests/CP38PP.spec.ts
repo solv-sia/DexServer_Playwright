@@ -23,7 +23,7 @@ test.describe('Assign branch to sync group and verify player inherits it', () =>
   test('@CP38PP', async ({ page }) => {
     test.setTimeout(300000);
 
-    // Precondition: create headless player via API
+    // Precondición: crear player headless vía API
     const player = await createPlayer(config.tenantActivationKeyCP14PP, config.playerCP38PP);
     cleanupIds.push(player.machineId);
 
@@ -37,7 +37,7 @@ test.describe('Assign branch to sync group and verify player inherits it', () =>
     await globalPage.clickNetwork();
     await globalPage.waitSpinner();
 
-    // Create sync group with the new player
+    // Crear grupo sincronizado con el nuevo player
     await networkPage.clickMoreBtn();
     await networkPage.clickSyncGroupBtn();
 
@@ -54,13 +54,14 @@ test.describe('Assign branch to sync group and verify player inherits it', () =>
     await groupDetailPage.completeChannelOneSelect(player.machineName);
     await groupDetailPage.decisionConfirmPlayer();
 
-    // Assign the first available store/sucursal from the combo
+    // Asignar la primera sucursal disponible del combo
     const assignedStore = await groupDetailPage.selectFirstStoreOption();
 
     await groupDetailPage.clickSaveGroupBtn();
+    await globalPage.waitSpinner();
     await page.screenshot({ path: 'screenshots/cp38pp_group.png' });
 
-    // Navigate to the headless player via the sync group card (player is channel 1 inside it)
+    // Navegar al player headless desde la tarjeta del grupo sincronizado (el player es el canal 1)
     await globalPage.clickNetwork();
     await globalPage.waitSpinner();
     await networkPage.clearAndSearch(syncGroupName);

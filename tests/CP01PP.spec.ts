@@ -5,7 +5,7 @@ import { LoginPage } from '../pages/LoginPage';
 import { ForgotPasswordPage } from '../pages/ForgotPasswordPage';
 import { GlobalPage } from '../pages/GlobalPage';
 
-// CP01PP starts from a clean (unauthenticated) state — no storageState
+// CP01PP comienza desde un estado limpio (sin autenticar) — sin storageState
 test.use({ storageState: { cookies: [], origins: [] } });
 
 test.describe('Login, logout y recupero de contraseña', () => {

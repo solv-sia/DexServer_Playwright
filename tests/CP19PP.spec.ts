@@ -26,10 +26,10 @@ test.describe('Update a player playlist/schedule and verify via HB API', () => {
 
     await loginWithSession(page, config.userName2, config.password);
 
-    // Open via deep-link (not card click): card-opened panels don't commit combo changes
-    // into Polymer's dirty state, so the save button stays disabled. Double-goto ensures
-    // the panel initialises correctly. Use machineId to target the freshly-created player
-    // instead of searching by name (fixed name collides with players from previous runs).
+    // Navegar vía deep-link (no por clic en tarjeta): los paneles abiertos desde tarjeta no confirman
+    // los cambios de combo en el dirty state de Polymer, por lo que el botón guardar queda deshabilitado. El doble goto
+    // asegura que el panel se inicialice correctamente. Se usa machineId para apuntar al player recién creado
+    // en lugar de buscar por nombre (el nombre fijo colisiona con players de corridas anteriores).
     const playerUrl = `${config.baseUrl}/DexFrontEnd/#!/network/${player.machineId}`;
     await page.goto(playerUrl, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(1500);
@@ -43,7 +43,7 @@ test.describe('Update a player playlist/schedule and verify via HB API', () => {
     await globalPage.readInfoPopup(/Player guardado|Player saved/i);
     await page.screenshot({ path: 'screenshots/cp19pp_saved.png' });
 
-    // Verify via HB API using the created player's machineId and messageKey
+    // Verificar vía API de HB usando el machineId y messageKey del player creado
     const hbUrl = `${config.baseUrl}/DexFrontend/api/v3/heartBeatSync/${player.machineId}/${player.messageKey}`;
     let playlistId = 0;
     let scheduleId = 0;

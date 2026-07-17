@@ -13,7 +13,7 @@ test.use({ storageState: { cookies: [], origins: [] } });
 
 test.describe('Upload File', () => {
   test('@CP08PP Upload media', async ({ page }) => {
-    test.setTimeout(600000); // FFmpeg re-encodes video client-side before upload — can take several minutes
+    test.setTimeout(600000); // FFmpeg re-codifica el video en el cliente antes de subirlo — puede tardar varios minutos
     const fechaFormateada = dateFormatter.datetime(true);
     const folderName = config.uploadFolderName + ' ' + fechaFormateada;
 
@@ -44,7 +44,7 @@ test.describe('Upload File', () => {
     await mediaLibraryPage.checkMediaSize(config.expectedVideoSize);
     await mediaLibraryPage.clickCloseBtn();
 
-    // Image
+    // Imagen
     await mediaLibraryPage.dropFile(config.fileName2);
     await page.screenshot({ path: 'screenshots/cp08pp-image-upload.png' });
     await mediaLibraryPage.clickOnMedia(config.fileName2);
@@ -54,7 +54,7 @@ test.describe('Upload File', () => {
     await mediaLibraryPage.checkMediaSize(config.expectedImageSize);
     await mediaLibraryPage.clickCloseBtn();
 
-    // Template (.wgt)
+    // Plantilla (.wgt)
     await mediaLibraryPage.dropFile(config.fileName3);
     await page.screenshot({ path: 'screenshots/cp08pp-template-upload.png' });
     await mediaLibraryPage.clickOnMedia(config.fileName3);
