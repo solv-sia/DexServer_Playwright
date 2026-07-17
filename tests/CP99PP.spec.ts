@@ -33,18 +33,22 @@ test.describe('Limpieza suite: eliminar elementos creados', () => {
     const mediaLibraryPage = new MediaLibraryPage(page);
 
     await globalPage.clickOnMediaLibraryHeader();
-    await mediaLibraryPage.typeSearchMediaInput2(config.fileUploadPath);
-    await mediaLibraryPage.findBottomFolder(config.fileUploadPath);
-
-    await page.locator(`div[title='${config.uploadFolderName}']`).first().click();
-    await page.waitForTimeout(500);
-
-    for (const file of [config.fileToDelete1, config.fileToDelete2, config.fileToDelete3, config.fileToDelete4]) {
-      try {
-        await mediaLibraryPage.deleteMediaFromLibrary(file);
-      } catch {
-        // el archivo puede no existir
+    // La carpeta se creó con timestamp (ej: "CARPETA AUTOMATION 17-07-2026 14.30.25"),
+    // por eso usamos ^= (starts-with) en lugar de igualdad exacta
+    try {
+      await mediaLibraryPage.typeSearchMediaInput2(config.fileUploadPath);
+      await mediaLibraryPage.findBottomFolder(config.fileUploadPath);
+      await page.locator(`div[title^='${config.uploadFolderName}']`).first().click({ timeout: 8000 });
+      await page.waitForTimeout(500);
+      for (const file of [config.fileToDelete1, config.fileToDelete2, config.fileToDelete3, config.fileToDelete4]) {
+        try {
+          await mediaLibraryPage.deleteMediaFromLibrary(file);
+        } catch {
+          // el archivo puede no existir
+        }
       }
+    } catch {
+      // La carpeta no existe — CP08PP no creó archivos en esta corrida o ya fueron eliminados
     }
 
     await page.screenshot({ path: 'screenshots/cp99app.png' });

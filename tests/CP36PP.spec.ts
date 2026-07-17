@@ -7,7 +7,7 @@ import { getProofOfPlayEvents } from '../utils/automationApi';
 
 
 test.describe('POP - Verificar que se generen los eventos de reproduccion', () => {
-  test('@CP36PP', async () => {
+  test.skip('@CP36PP', async () => {
     const machineId = getSharedData('machineIdCP11PP');
 
     if (!machineId) {

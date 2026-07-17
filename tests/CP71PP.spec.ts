@@ -23,11 +23,20 @@ test.describe('Búsqueda por superfiltro - doble condición simultánea', () => 
    * El botón "+" o "Agregar condición" aparece después de la primera fila.
    */
   const addSecondFilterRow = async (page: import('@playwright/test').Page) => {
-    // El botón "Agregar condición" puede estar fuera de #advanceFilter (en el panel de filas)
-    const addRowBtn = page.locator(
-      'paper-button[icon="add"], paper-icon-button[icon="add"], ' +
-      '.add-filter-row, paper-button, paper-icon-button'
-    ).filter({ hasText: /agregar|add|\+/i }).first();
+    // Cierra programáticamente cualquier vaadin-combo-box abierto (con traversal de shadow DOM).
+    // Algunos tipos de campo (ej. Calendario) no cierran el overlay al presionar Enter
+    // porque son multi-select. Si queda abierto, los índices nth() del tagInput se
+    // corrompen porque el overlay agrega inputs extra al DOM.
+    const comboCount = await page.locator('dex-new-combo-tags-filter vaadin-combo-box#tagInput').count();
+    for (let ci = 0; ci < comboCount; ci++) {
+      await page.locator('dex-new-combo-tags-filter vaadin-combo-box#tagInput').nth(ci).evaluate((el: any) => {
+        if (el.opened) el.close();
+      });
+    }
+    await page.waitForTimeout(200);
+    // El botón "+" es un paper-icon-button con icon="add" (sin texto visible, solo ícono)
+    const addRowBtn = page.locator('paper-icon-button[icon="add"]').first();
+    await addRowBtn.waitFor({ state: 'attached', timeout: 10000 });
     await addRowBtn.dispatchEvent('click');
     await page.waitForTimeout(500);
   };

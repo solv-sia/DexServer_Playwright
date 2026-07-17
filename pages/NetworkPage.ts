@@ -173,7 +173,9 @@ export class NetworkPage extends BasePage {
 
   async typeInSuperFilterTagInput(value: string, index = 0) {
     const input = this.elements.superFilterTagInput(index);
-    await input.click({ force: true });
+    // dispatchEvent bypasses bounding-box checks — necesario cuando el input
+    // está dentro de un overlay con posición fuera del viewport del diálogo
+    await input.dispatchEvent('click');
     await input.fill(value, { force: true });
     await input.press('ArrowDown');
     await input.press('Enter');

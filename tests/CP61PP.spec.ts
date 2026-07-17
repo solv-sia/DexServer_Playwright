@@ -24,8 +24,8 @@ test.describe('Búsqueda por superfiltro - ID', () => {
     await networkPage.clickSuperFilterPopUp();
     await networkPage.typeInSuperFilterField('ID', 0);
     await networkPage.typeInSuperFilterCondition('Contiene', 0);
-    await networkPage.clickSuperFilterTagCombo(0);
-    await networkPage.typeInSuperFilterTagInput('5259', 0);
+    await networkPage.clickSuperFilterTagCombo(1);
+    await networkPage.typeInSuperFilterTagInput('5259', 1);
     await networkPage.clickSuperFilterApplyBtn();
     const count = await page.locator('#dexNetworkList dex-network-group').count();
     expect(count).toBeGreaterThanOrEqual(0);
@@ -38,8 +38,8 @@ test.describe('Búsqueda por superfiltro - ID', () => {
     await networkPage.clickSuperFilterPopUp();
     await networkPage.typeInSuperFilterField('ID', 0);
     await networkPage.typeInSuperFilterCondition('No contiene', 0);
-    await networkPage.clickSuperFilterTagCombo(0);
-    await networkPage.typeInSuperFilterTagInput('5259', 0);
+    await networkPage.clickSuperFilterTagCombo(1);
+    await networkPage.typeInSuperFilterTagInput('5259', 1);
     await networkPage.clickSuperFilterApplyBtn();
     const count = await page.locator('#dexNetworkList dex-network-group').count();
     expect(count).toBeGreaterThanOrEqual(0);

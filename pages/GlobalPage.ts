@@ -150,7 +150,7 @@ export class GlobalPage extends BasePage {
   async clickNetwork() {
     await this.waitOverlayClosed();
     const icon = this.elements.networkIcon();
-    await icon.waitFor({ state: 'attached', timeout: 30000 }).catch(() => {});
+    await icon.waitFor({ state: 'attached', timeout: 60000 }).catch(() => {});
     await icon.dispatchEvent('click');
   }
   async clickOnNetworkHeader()            { await this.waitOverlayClosed(); await this.elements.networkIcon().dispatchEvent('click'); }

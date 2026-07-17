@@ -1,5 +1,5 @@
 {
-  "useTestRail": true,
+  "useTestRail": false,
   "testRunId": 1065,
   "testRailProject": "dexserver",
   "clientName": "ARG - QA Automation",
