@@ -3,7 +3,6 @@ import { test, expect } from '@playwright/test';
 import config from '../utils/config';
 import { GlobalPage } from '../pages/GlobalPage';
 import { loginWithSession } from '../utils/loginWithSession';
-import { NetworkPage } from '../pages/NetworkPage';
 import { NetworkDetailPage } from '../pages/NetworkDetailPage';
 import { createPlayer, deletePlayer } from '../utils/automationApi';
 
@@ -23,17 +22,19 @@ test.describe('Update a player playlist/schedule and verify via HB API', () => {
     cleanupIds.push(player.machineId);
 
     const globalPage = new GlobalPage(page);
-    const networkPage = new NetworkPage(page);
     const networkDetailPage = new NetworkDetailPage(page);
 
     await loginWithSession(page, config.userName2, config.password);
 
-    await globalPage.clickNetwork();
-    await globalPage.waitSpinner();
-    await networkPage.clearAndSearch(player.machineName);
-    await page.waitForTimeout(2000);
-    await networkPage.clickResultingPlayer();
-    await page.waitForTimeout(1000);
+    // Open via deep-link (not card click): card-opened panels don't commit combo changes
+    // into Polymer's dirty state, so the save button stays disabled. Double-goto ensures
+    // the panel initialises correctly. Use machineId to target the freshly-created player
+    // instead of searching by name (fixed name collides with players from previous runs).
+    const playerUrl = `${config.baseUrl}/DexFrontEnd/#!/network/${player.machineId}`;
+    await page.goto(playerUrl, { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(1500);
+    await page.goto(playerUrl, { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(3000);
 
     await networkDetailPage.setNewPlaylist(config.playlistDefaultCP19PP, config.playlistDefaultCP19BackUp);
     await networkDetailPage.setNewSchedule(config.scheduleCP19PP, config.scheduleCP19BackUp);

@@ -497,13 +497,34 @@ export class MediaLibraryPage extends BasePage {
 
   async clickOnReplacementMedia(mediaName: string) {
     const baseName = mediaName.replace(/\.[^/.]+$/, '');
-    // Wait for any card to be in DOM (Playwright pierces shadow DOM)
-    await this.page.locator('div.mediaCardC').first()
-      .waitFor({ state: 'attached', timeout: 15000 });
-    // JS click via shadow-piercing findAll — same pattern as other methods here.
-    // iron-list sets off-viewport cards to display:none so Playwright .click()
-    // times out; native el.click() fires the event regardless of visibility.
-    const clicked = await this.page.evaluate((name: string) => {
+
+    // Wait for the target item to appear — either as a div.mediaCardC (grid view)
+    // or as a div[title] (list view used by the replacement dialog). The old waitFor
+    // on div.mediaCardC.first() was hitting cards from the main library behind the
+    // dialog overlay rather than the dialog's own items.
+    await this.page.waitForFunction(
+      ({ base, full }: { base: string; full: string }) => {
+        function findAll(root: Document | ShadowRoot, sel: string): HTMLElement[] {
+          const items = Array.from(root.querySelectorAll(sel)) as HTMLElement[];
+          for (const el of root.querySelectorAll('*')) {
+            const sr = (el as any).shadowRoot;
+            if (sr) items.push(...findAll(sr, sel));
+          }
+          return items;
+        }
+        return (
+          findAll(document, 'div.mediaCardC').some(el => (el.textContent ?? '').includes(base)) ||
+          findAll(document, 'div[title]').some(el => {
+            const t = el.getAttribute('title') ?? '';
+            return t === base || t === full || t.startsWith(base);
+          })
+        );
+      },
+      { base: baseName, full: mediaName },
+      { timeout: 15000 },
+    );
+
+    const clicked = await this.page.evaluate(({ base, full }: { base: string; full: string }) => {
       function findAll(root: Document | ShadowRoot, sel: string): HTMLElement[] {
         const items = Array.from(root.querySelectorAll(sel)) as HTMLElement[];
         for (const el of root.querySelectorAll('*')) {
@@ -512,11 +533,20 @@ export class MediaLibraryPage extends BasePage {
         }
         return items;
       }
-      const match = findAll(document, 'div.mediaCardC')
-        .find(el => (el.textContent ?? '').includes(name));
-      if (match) { match.click(); return true; }
+      // Card view
+      const cardMatch = findAll(document, 'div.mediaCardC')
+        .find(el => (el.textContent ?? '').includes(base));
+      if (cardMatch) { cardMatch.click(); return true; }
+      // List view (replacement dialog uses div[title] like folder items do)
+      const titleMatch = findAll(document, 'div[title]')
+        .find(el => {
+          const t = el.getAttribute('title') ?? '';
+          return t === base || t === full || t.startsWith(base);
+        });
+      if (titleMatch) { titleMatch.click(); return true; }
       return false;
-    }, baseName);
+    }, { base: baseName, full: mediaName });
+
     if (!clicked) throw new Error(`Media card not found: ${baseName}`);
     await this.page.waitForTimeout(300);
   }

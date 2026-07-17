@@ -61,9 +61,12 @@ export class NetworkDetailPage extends BasePage {
   private async selectInOpenedCombo(value: string) {
     const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-    // Primary: click via ARIA role — getByRole pierces shadow DOM, works for vaadin-combo-box-item
-    const option = this.page.locator('vaadin-combo-box-overlay[opened]')
-      .getByRole('option')
+    // Primary: click the vaadin-combo-box-item directly (same approach as GroupDetailPage).
+    // getByRole('option') was skipped because vaadin-combo-box-item does not expose
+    // role="option" as a DOM attribute in this Vaadin version, so it always fell through
+    // to the JS-assignment fallback which bypasses Polymer's dirty-tracking and left the
+    // save button disabled.
+    const option = this.page.locator('vaadin-combo-box-overlay[opened] vaadin-combo-box-item')
       .filter({ hasText: new RegExp(escaped, 'i') })
       .first();
     const clicked = await option.waitFor({ state: 'visible', timeout: 8000 })

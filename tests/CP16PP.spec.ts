@@ -49,8 +49,8 @@ test.describe('Create LNL Group', () => {
     await groupDetailPage.completeTransmissionPolicySelect(config.LNLtransmissionPolicyName);
     await groupDetailPage.completeHardwarePolicySelect(config.LNLhardwarePolicyName);
     await groupDetailPage.clickSaveGroupBtn();
-    await globalPage.waitSpinner();
     await globalPage.readInfoPopup(/Grupo guardado|Group saved/i);
+    await globalPage.waitSpinner();
     await page.screenshot({ path: 'screenshots/cp16pp_group.png' });
 
     // Assign each player to the group, then validate it inherits the group's settings.

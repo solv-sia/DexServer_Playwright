@@ -4,7 +4,7 @@ import config from '../utils/config';
 import { GlobalPage } from '../pages/GlobalPage';
 import { loginWithSession } from '../utils/loginWithSession';
 import { NetworkDetailPage } from '../pages/NetworkDetailPage';
-import { createPlayer, deletePlayer, getHeartBeatByMachineId } from '../utils/automationApi';
+import { createPlayer, deletePlayer } from '../utils/automationApi';
 
 test.use({ storageState: { cookies: [], origins: [] } });
 
@@ -37,18 +37,20 @@ test.describe('Actualizar la version de los players (probar downgrade y upgrade)
     await page.goto(playerUrl, { waitUntil: 'domcontentloaded' });
     await page.waitForTimeout(4000);
 
+    const hbUrl = `${config.baseUrl}/DexFrontend/api/v3/heartBeatSync/${player.machineId}/${player.messageKey}`;
+
     const setVersionAndVerifyHB = async (targetVersion: string) => {
-      // setVersionToInstall selects the version and clicks Save (within the brief enabled window).
       await networkDetailPage.setVersionToInstall(targetVersion);
       await page.waitForTimeout(3000);
 
       let latestVersion = '';
       let lastHbData: Record<string, unknown> = {};
 
-      // Read the heartbeat via the dexaut QA endpoint, which surfaces the player's
-      // configured "version to install" as LatestVersion.
       for (let i = 0; i < 10; i++) {
-        const hbData = await getHeartBeatByMachineId(player.machineId);
+        const hbData: Record<string, unknown> = await page.evaluate(async (url) => {
+          const res = await fetch(url, { method: 'POST' });
+          return res.json();
+        }, hbUrl);
 
         lastHbData = hbData;
         latestVersion = String(hbData['LatestVersion'] ?? '');

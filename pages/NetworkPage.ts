@@ -224,5 +224,8 @@ export class NetworkPage extends BasePage {
     await this.elements.resetCommand().dispatchEvent('click');
     await this.elements.confirmButton().waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
   }
-  async clickConfirmButton() { await this.elements.confirmButton().dispatchEvent('click'); }
+  async clickConfirmButton() {
+    await this.elements.confirmButton().click();
+    await this.page.locator('#commandDialog').waitFor({ state: 'hidden', timeout: 8000 }).catch(() => {});
+  }
 }

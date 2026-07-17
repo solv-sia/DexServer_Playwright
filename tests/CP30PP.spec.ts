@@ -1,5 +1,5 @@
 // Crear política de transmisión y asignarla al grupo validando herencia
-import { test } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import config from '../utils/config';
 import dateFormatter from '../utils/dateFormatter';
 import { setSharedData } from '../utils/sharedData';
@@ -60,6 +60,7 @@ test.describe('Create Transmission Policy', () => {
     await groupDetailPage.completeChannelTwoSelect(player2.machineName);
     await groupDetailPage.decisionConfirmPlayer();
     await groupDetailPage.clickSaveGroupBtn();
+    await globalPage.waitSpinner();
 
     // Crear política de transmisión
     await globalPage.clickOnNetworkHeader();
@@ -85,22 +86,27 @@ test.describe('Create Transmission Policy', () => {
     await networkPage.clickResultingGroup();
     await groupDetailPage.completeTransmissionPolicySelect(transmissionPolicyName);
     await groupDetailPage.clickSaveGroupBtn();
+    await globalPage.waitSpinner();
     await page.screenshot({ path: 'screenshots/cp30pp_group.png' });
 
-    // Validar herencia en player1
-    await globalPage.clickNetwork();
-    await globalPage.waitSpinner();
-    await networkPage.clearAndSearch(player1.machineName);
-    await networkPage.clickResultingPlayer();
-    await networkDetailPage.validateInheritedValues({ transmissionPolicyName });
+    // Validar herencia en player1 — propagación eventual: reabrir hasta que aparezca.
+    await expect(async () => {
+      await globalPage.clickNetwork();
+      await globalPage.waitSpinner();
+      await networkPage.clearAndSearch(player1.machineName);
+      await networkPage.clickResultingPlayer();
+      await networkDetailPage.validateInheritedValues({ transmissionPolicyName });
+    }).toPass({ timeout: 90000, intervals: [3000, 5000, 5000, 8000, 8000] });
     await page.screenshot({ path: 'screenshots/cp30pp_player1.png' });
 
     // Validar herencia en player2
-    await globalPage.clickNetwork();
-    await globalPage.waitSpinner();
-    await networkPage.clearAndSearch(player2.machineName);
-    await networkPage.clickResultingPlayer();
-    await networkDetailPage.validateInheritedValues({ transmissionPolicyName });
+    await expect(async () => {
+      await globalPage.clickNetwork();
+      await globalPage.waitSpinner();
+      await networkPage.clearAndSearch(player2.machineName);
+      await networkPage.clickResultingPlayer();
+      await networkDetailPage.validateInheritedValues({ transmissionPolicyName });
+    }).toPass({ timeout: 90000, intervals: [3000, 5000, 5000, 8000, 8000] });
     await page.screenshot({ path: 'screenshots/cp30pp_player2.png' });
   });
 });

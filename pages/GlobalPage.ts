@@ -186,22 +186,25 @@ export class GlobalPage extends BasePage {
     label: ReturnType<typeof this.page.locator>,
     msg: string | RegExp,
   ) {
-    // Wait for the toast container to appear (action may still be in progress).
-    // If it dismisses before we call this method, waitFor resolves false and we
-    // fall back to the text that persists in the DOM after dismiss.
-    const appeared = await toast.waitFor({ state: 'visible', timeout: 10000 })
+    // Wait for the toast container itself to become visible — same approach used
+    // by setVersionToInstall. If this times out the save never triggered a toast
+    // (button disabled, suppressed by another toast, or server error).
+    const appeared = await toast.waitFor({ state: 'visible', timeout: 12000 })
       .then(() => true).catch(() => false);
 
-    if (appeared) {
-      // Toast is visible — verify text while it's still there
-      if (msg instanceof RegExp) await expect(label).toHaveText(msg, { timeout: 8000 });
-      else await expect(label).toContainText(msg, { timeout: 8000 });
-      return;
+    if (!appeared) {
+      throw new Error(`Expected toast matching ${msg} — toast container never became visible`);
     }
 
-    // Toast already dismissed — the label keeps the last text in the DOM
-    const text = (await label.textContent() ?? '').trim();
+    // Toast is visible; read the label. Try shadow-piercing locator first, fall
+    // back to textContent on the container for Shady DOM layouts.
+    const labelText = ((await label.textContent().catch(() => '')) ?? '').trim();
+    const containerText = ((await toast.textContent().catch(() => '')) ?? '').trim();
+    const text = labelText || containerText;
+
     const matches = msg instanceof RegExp ? msg.test(text) : text.includes(msg);
-    if (!matches) throw new Error(`Expected toast matching ${msg} but label has "${text}"`);
+    if (!matches) {
+      throw new Error(`Expected toast matching ${msg} but got "${text}"`);
+    }
   }
 }

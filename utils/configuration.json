@@ -1,6 +1,6 @@
 {
-  "useTestRail": false,
-  "testRunId": 1048,
+  "useTestRail": true,
+  "testRunId": 1065,
   "testRailProject": "dexserver",
   "clientName": "ARG - QA Automation",
   "clientNameFiltros": "ARG - QA Automation Filtros",

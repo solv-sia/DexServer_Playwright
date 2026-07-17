@@ -60,8 +60,8 @@ test.describe('Solicitar logs y capturas al player', () => {
         return data.CommandList ?? [];
       }, hbUrl);
 
-      hasSNDLGS = commandList.some((cmd: string) => String(cmd).includes('SNDLGS'));
-      hasSCNSHT = commandList.some((cmd: string) => String(cmd).includes('SCNSHT'));
+      if (!hasSNDLGS) hasSNDLGS = commandList.some((cmd: string) => String(cmd).includes('SNDLGS'));
+      if (!hasSCNSHT) hasSCNSHT = commandList.some((cmd: string) => String(cmd).includes('SCNSHT'));
       if (hasSNDLGS && hasSCNSHT) break;
       await page.waitForTimeout(2000);
     }

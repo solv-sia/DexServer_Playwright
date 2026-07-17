@@ -36,26 +36,38 @@ export class GroupDetailPage extends BasePage {
     const overlay = this.page.locator('vaadin-combo-box-overlay[opened]');
     await overlay.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
 
-    // Click to trigger async item loading (items may be 0 right after dialog opens)
-    await input.click({ force: true });
-    await input.fill(value, { force: true });
-    await overlay.waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
+    const checkReady = () => combo.evaluate((el: any, val: string) => {
+      const labelPath = el.itemLabelPath;
+      const allItems: any[] = el.items || [];
+      if (allItems.length === 0) return false;
+      const searchIn: any[] = el.filteredItems?.length ? el.filteredItems : allItems;
+      return searchIn.some((item: any) => {
+        const label = typeof item === 'string' ? item
+          : String(labelPath ? (item[labelPath] ?? '') : (item.label || item.name || item.Name || ''));
+        return label.toLowerCase().includes(val.toLowerCase());
+      });
+    }, value);
 
-    // Wait until items are loaded AND a matching item is rendered (handles server-side async fetch)
-    for (let i = 0; i < 100; i++) {
-      const ready = await combo.evaluate((el: any, val: string) => {
-        const labelPath = el.itemLabelPath;
-        const allItems: any[] = el.items || [];
-        if (allItems.length === 0) return false;
-        const searchIn: any[] = el.filteredItems?.length ? el.filteredItems : allItems;
-        return searchIn.some((item: any) => {
-          const label = typeof item === 'string' ? item
-            : String(labelPath ? (item[labelPath] ?? '') : (item.label || item.name || item.Name || ''));
-          return label.toLowerCase().includes(val.toLowerCase());
-        });
-      }, value);
-      if (ready) break;
-      await this.page.waitForTimeout(100);
+    const fillAndWait = async (): Promise<boolean> => {
+      await input.click({ force: true });
+      await input.fill(value, { force: true });
+      await overlay.waitFor({ state: 'visible', timeout: 8000 }).catch(() => {});
+      // Wait up to 15 s for the item to appear (server-side fetch may be slow under load)
+      for (let i = 0; i < 150; i++) {
+        if (await checkReady()) return true;
+        await this.page.waitForTimeout(100);
+      }
+      return false;
+    };
+
+    let ready = await fillAndWait();
+
+    // Retry once: close combo and reopen to trigger a fresh server fetch
+    if (!ready) {
+      await input.press('Escape');
+      await overlay.waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
+      await this.page.waitForTimeout(1000);
+      ready = await fillAndWait();
     }
 
     // Commit by clicking the matching overlay item — a native click fires the value-changed
