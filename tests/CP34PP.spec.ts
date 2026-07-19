@@ -35,8 +35,16 @@ test.describe('Verificar progreso de descargas', () => {
     await networkPage.clickResultingPlayer();
     await page.waitForTimeout(1000);
 
-    // Asignar nueva playlist por defecto
-    await networkDetailPage.setNewPlaylist(config.PL_CP34PP, config.PL_CP34PP);
+    // Asignar nueva playlist por defecto (debe existir como dato pre-configurado en demo5)
+    try {
+      await networkDetailPage.setNewPlaylist(config.PL_CP34PP, config.PL_CP34PP);
+    } catch {
+      throw new Error(
+        `[BUG DATA CP34PP] La playlist "${config.PL_CP34PP}" no existe en el entorno demo5. ` +
+        'Esta playlist debe estar pre-configurada en el ambiente de pruebas antes de ejecutar la suite. ' +
+        'Sin ella no es posible asignarla al player ni generar los eventos POP que verifica CP46PP.'
+      );
+    }
     await networkDetailPage.decisionToSavePlayer();
     await page.waitForTimeout(3000); // permitir que el servidor procese la asignación
 

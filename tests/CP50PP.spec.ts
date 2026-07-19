@@ -22,6 +22,30 @@ test.describe('Configurar media con tags y validar propagacion', () => {
     await globalPage.clickOnMediaLibraryHeader();
     await mediaLibraryPage.typeSearchMediaInput2(config.mediaToChangePath);
     await mediaLibraryPage.findBottomFolder(config.mediaToChangePath);
+
+    // Verificar que la media existe antes de clickear para evitar timeout de 5min
+    const mediaExists = await page.waitForFunction(
+      (name: string) => {
+        function findAll(root: Document | ShadowRoot, sel: string): Element[] {
+          const results = Array.from(root.querySelectorAll(sel));
+          for (const el of Array.from(root.querySelectorAll('*'))) {
+            const sr = (el as any).shadowRoot;
+            if (sr) results.push(...findAll(sr, sel));
+          }
+          return results;
+        }
+        return findAll(document, 'dex-media-card[slot="card"]').some(c => (c.textContent ?? '').includes(name));
+      },
+      config.mediaToChange,
+      { timeout: 15000 }
+    ).then(() => true).catch(() => false);
+
+    if (!mediaExists) {
+      throw new Error(
+        `[BUG APP CP50PP] La media "${config.mediaToChange}" no se encontró en la carpeta "${config.mediaToChangePath}". ` +
+        'La media de propagación puede haber sido eliminada o renombrada en el entorno actual.'
+      );
+    }
     await mediaLibraryPage.clickOnMedia(config.mediaToChange);
     await page.waitForTimeout(500);
 

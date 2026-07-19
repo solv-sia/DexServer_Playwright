@@ -90,24 +90,42 @@ test.describe('Create HW Policy', () => {
     await globalPage.waitSpinner();
     await page.screenshot({ path: 'screenshots/cp29pp_group.png' });
 
-    // Validar herencia en player1
-    await expect(async () => {
-      await globalPage.clickNetwork();
-      await globalPage.waitSpinner();
-      await networkPage.clearAndSearch(player1.machineName);
-      await networkPage.clickResultingPlayer();
-      await networkDetailPage.validateInheritedValues({ hardwarePolicyName });
-    }).toPass({ timeout: 180000, intervals: [5000, 8000, 8000, 10000, 10000] });
+    // Validar herencia en player1: la política asignada al grupo debe propagarse al player
+    try {
+      await expect(async () => {
+        await globalPage.clickNetwork();
+        await globalPage.waitSpinner();
+        await networkPage.clearAndSearch(player1.machineName);
+        await networkPage.clickResultingPlayer();
+        await networkDetailPage.validateInheritedValues({ hardwarePolicyName });
+      }).toPass({ timeout: 180000, intervals: [5000, 8000, 8000, 10000, 10000] });
+    } catch {
+      throw new Error(
+        `[BUG APP CP29PP] El player "${player1.machineName}" no refleja la política de hardware ` +
+        `"${hardwarePolicyName}" como valor heredado después de 180 segundos. ` +
+        'La propagación de herencia de políticas de hardware a través del grupo no está funcionando ' +
+        'correctamente, o tiene un retardo mayor al esperado en la versión actual.'
+      );
+    }
     await page.screenshot({ path: 'screenshots/cp29pp_player1.png' });
 
-    // Validar herencia en player2
-    await expect(async () => {
-      await globalPage.clickNetwork();
-      await globalPage.waitSpinner();
-      await networkPage.clearAndSearch(player2.machineName);
-      await networkPage.clickResultingPlayer();
-      await networkDetailPage.validateInheritedValues({ hardwarePolicyName });
-    }).toPass({ timeout: 180000, intervals: [5000, 8000, 8000, 10000, 10000] });
+    // Validar herencia en player2: misma verificación
+    try {
+      await expect(async () => {
+        await globalPage.clickNetwork();
+        await globalPage.waitSpinner();
+        await networkPage.clearAndSearch(player2.machineName);
+        await networkPage.clickResultingPlayer();
+        await networkDetailPage.validateInheritedValues({ hardwarePolicyName });
+      }).toPass({ timeout: 180000, intervals: [5000, 8000, 8000, 10000, 10000] });
+    } catch {
+      throw new Error(
+        `[BUG APP CP29PP] El player "${player2.machineName}" no refleja la política de hardware ` +
+        `"${hardwarePolicyName}" como valor heredado después de 180 segundos. ` +
+        'La propagación de herencia de políticas de hardware a través del grupo no está funcionando ' +
+        'correctamente, o tiene un retardo mayor al esperado en la versión actual.'
+      );
+    }
     await page.screenshot({ path: 'screenshots/cp29pp_player2.png' });
   });
 });

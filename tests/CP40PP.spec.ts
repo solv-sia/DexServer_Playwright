@@ -26,6 +26,17 @@ test.describe('Asignar playlist de supertenant al player (CP40PP)', () => {
 
     await networkPage.clearAndSearch(config.playerCP11PP);
     await page.waitForTimeout(1500);
+
+    // Verificar que el player aparece en la lista antes de intentar clickear
+    const playerCards = await page.locator('#dexNetworkList dex-network-display-card').count().catch(() => 0);
+    if (playerCards === 0) {
+      throw new Error(
+        `[BUG APP CP40PP] El player "${config.playerCP11PP}" no aparece en la lista de red para testermation2. ` +
+        'El player fue creado y aprobado en CP11PP (clave de activación distinta a la del tenant FODNMR). ' +
+        'Posible causa: el player pertenece a un contexto de tenant diferente al que ve testermation2 al iniciar sesión, ' +
+        'o la visibilidad multi-tenant no está habilitada en esta versión.'
+      );
+    }
     await networkPage.clickResultingPlayer();
     await page.waitForTimeout(1000);
 
