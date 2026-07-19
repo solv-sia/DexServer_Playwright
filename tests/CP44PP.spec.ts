@@ -23,6 +23,16 @@ test.describe('Crear SuperTenant y activarlo', () => {
     const superCustomerName = 'nuevo SuperTenant ' + dateFormatter.datetime();
 
     await globalPage.clickMenuSetting();
+    // Verificar que la opción Clientes existe en el menú antes de hacer click
+    const customerLinkExists = await page.locator('[href=\'#!/settings/customer\']')
+      .waitFor({ state: 'attached', timeout: 8000 }).then(() => true).catch(() => false);
+    if (!customerLinkExists) {
+      throw new Error(
+        '[BUG APP CP44PP] La opción "Clientes" no aparece en el menú de Configuración para el usuario testermation2. ' +
+        'El usuario no tiene acceso a la sección de gestión de clientes, o la funcionalidad de creación de SuperTenant ' +
+        'está deshabilitada en la versión actual de la aplicación.'
+      );
+    }
     await globalPage.clickOptionCustomer();
 
     await customerPage.clickAddButton();

@@ -157,7 +157,8 @@ export class NetworkPage extends BasePage {
 
   async typeInSuperFilterField(field: string, index = 0) {
     const input = this.elements.superFilterField(index);
-    await input.click({ force: true });
+    // dispatchEvent evita el check de bounding-box — necesario para filas 2+ del superfiltro
+    await input.dispatchEvent('click');
     await input.fill(field, { force: true });
     await input.press('ArrowDown');
     await input.press('Enter');
@@ -165,7 +166,8 @@ export class NetworkPage extends BasePage {
 
   async typeInSuperFilterCondition(condition: string, index = 0) {
     const input = this.elements.superFilterCondition(index);
-    await input.click({ force: true });
+    // dispatchEvent evita el check de bounding-box — necesario para filas 2+ del superfiltro
+    await input.dispatchEvent('click');
     await input.fill(condition, { force: true });
     await input.press('ArrowDown');
     await input.press('Enter');

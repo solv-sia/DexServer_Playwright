@@ -10,8 +10,9 @@ export class ReportPage extends BasePage {
     machineInput:    () => this.page.locator('vaadin-text-field input').nth(2),
     fromDateInput:   () => this.page.locator('#container input').nth(2),
     toDateInput:     () => this.page.locator('#container input').nth(1),
-    arrowRight:      () => this.page.locator('.datepicker-nav-action iron-icon').nth(1),
-    arrowLeft:       () => this.page.locator('.datepicker-nav-action iron-icon').nth(0),
+    // Apuntar al contenedor del botón, no al iron-icon interno (que tiene bounding-box cero)
+    arrowRight:      () => this.page.locator('.datepicker-nav-action').nth(1),
+    arrowLeft:       () => this.page.locator('.datepicker-nav-action').nth(0),
     todayButtonFrom: () => this.page.locator('.datepicker-content').nth(0).locator('div[today=""]'),
     todayButtonTo:   () => this.page.locator('.datepicker-content').nth(1).locator('div[today=""]'),
     reportBtn:       () => this.page.locator('.report-btn'),
@@ -20,7 +21,7 @@ export class ReportPage extends BasePage {
 
   async clickFromDateInput()       { await this.elements.fromDateInput().click(); }
   async clickToDateInput()         { await this.elements.toDateInput().click(); }
-  async clickButtonArrowRigth()    { await this.elements.arrowRight().click(); }
+  async clickButtonArrowRigth()    { await this.elements.arrowRight().dispatchEvent('click'); }
   async clickTodayButtonFrom()     { await this.elements.todayButtonFrom().click(); }
   async clickTodayButtonTo()       { await this.elements.todayButtonTo().click(); }
   async clickButtonReport()        { await this.elements.reportBtn().click(); }

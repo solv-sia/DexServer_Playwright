@@ -336,7 +336,8 @@ export class MediaLibraryPage extends BasePage {
   }
 
   async clickCheckboxSelectAllPlaylist() {
-    await this.page.locator('paper-checkbox').filter({ hasText: /seleccionar todo|select all/i }).nth(0).click({ force: true });
+    // dispatchEvent evita el check de bounding-box — el checkbox puede tener área cero al abrir el diálogo
+    await this.page.locator('paper-checkbox').filter({ hasText: /seleccionar todo|select all/i }).nth(0).dispatchEvent('click');
   }
 
   async clickNextButton() {

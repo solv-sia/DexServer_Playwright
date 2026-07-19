@@ -211,6 +211,16 @@ test.describe('Limpieza suite: eliminar elementos creados', () => {
     const customerPage = new CustomerPage(page);
 
     await globalPage.clickMenuSetting();
+    // Verificar que la opción Clientes existe antes de hacer click
+    const customerLinkExists = await page.locator('[href=\'#!/settings/customer\']')
+      .waitFor({ state: 'attached', timeout: 8000 }).then(() => true).catch(() => false);
+    if (!customerLinkExists) {
+      throw new Error(
+        '[BUG APP CP99JPP] La opción "Clientes" no aparece en el menú de Configuración para el usuario testermation2. ' +
+        'No se puede eliminar el cliente creado en CP02PP. ' +
+        'El usuario no tiene acceso a la sección de gestión de clientes en la versión actual de la aplicación.'
+      );
+    }
     await globalPage.clickOptionCustomer();
     await globalPage.waitSpinner();
 
