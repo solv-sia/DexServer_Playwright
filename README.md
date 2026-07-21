@@ -61,6 +61,34 @@ npm run test:ui
 
 > Nunca uses `npm test` directamente — falla sin las variables de entorno.
 
+## TestRail
+
+Los resultados se pueden subir a TestRail configurando `utils/configuration.json`.
+
+### Sin TestRail (modo local — por defecto)
+
+```json
+{
+  "useTestRail": false,
+  "testRunId": 1065
+}
+```
+
+Los tests corren y reportan en consola / HTML report de Playwright. No se toca TestRail. **Usar siempre este modo para verificaciones y desarrollo.**
+
+### Con TestRail (subida oficial)
+
+```json
+{
+  "useTestRail": true,
+  "testRunId": 1065
+}
+```
+
+Al terminar cada test, el resultado se sube automáticamente al run `1065` en TestRail. Activar **solo** para la subida oficial — una vez por run, con la suite completa estabilizada.
+
+> **Importante:** no commitear `configuration.json` con `useTestRail: true`. El valor por defecto en el repo es siempre `false`.
+
 ## Estructura del proyecto
 
 ```
