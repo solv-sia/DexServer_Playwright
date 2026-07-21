@@ -261,23 +261,25 @@ export class MediaLibraryPage extends BasePage {
         }
         const cards = findAllCards(document);
 
-        // Fallback for newly dropped files
+        // Name-based match first — cards may be sorted alphabetically so "last card"
+        // is not always the newly dropped one (e.g. IMG < VIDEO alphabetically).
+        const matching = cards.filter(c => {
+          const rect = (c as HTMLElement).getBoundingClientRect();
+          return rect.width > 0 && deepText(c).includes(mediaName);
+        });
+        if (matching.length > 0) {
+          matching.sort((a, b) => deepText(a).indexOf(mediaName) - deepText(b).indexOf(mediaName));
+          const rect = (matching[0] as HTMLElement).getBoundingClientRect();
+          return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+        }
+
+        // Fallback: name not yet rendered in card — click the last card by DOM order.
         if (baseline > 0 && cards.length > baseline) {
           const rect = cards[cards.length - 1].getBoundingClientRect();
           if (rect.width > 0) return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
         }
 
-        // Only visible cards; sort by earliest occurrence to pick the card whose OWN name
-        // is mediaName (not a card that merely references it, e.g. "bound" → "madre").
-        const matching = cards
-          .filter(c => {
-            const rect = (c as HTMLElement).getBoundingClientRect();
-            return rect.width > 0 && deepText(c).includes(mediaName);
-          });
-        if (matching.length === 0) return null;
-        matching.sort((a, b) => deepText(a).indexOf(mediaName) - deepText(b).indexOf(mediaName));
-        const rect = (matching[0] as HTMLElement).getBoundingClientRect();
-        return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+        return null;
       },
       { mediaName: name, baseline }
     );

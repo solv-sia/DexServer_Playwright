@@ -9,7 +9,16 @@ export async function loginWithSession(
   password: string,
   clientName?: string,
 ) {
-  await page.goto(`${config.baseUrl}/DexFrontEnd/#!/login`, { waitUntil: 'domcontentloaded' });
+  // Retry up to 3 times on network-level errors (e.g. ERR_EMPTY_RESPONSE).
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      await page.goto(`${config.baseUrl}/DexFrontEnd/#!/login`, { waitUntil: 'domcontentloaded' });
+      break;
+    } catch (e) {
+      if (attempt === 3) throw e;
+      await page.waitForTimeout(3000);
+    }
+  }
 
   const loginPage = new LoginPage(page);
   const globalPage = new GlobalPage(page);
