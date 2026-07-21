@@ -67,12 +67,23 @@ export class CustomerPage extends BasePage {
     const btn = this.elements.confirmButton();
     await btn.waitFor({ state: 'visible', timeout: 10000 });
     await btn.dispatchEvent('click');
+    // Wait for the dialog to fully close before returning — prevents race conditions
+    // where the next action (search, navigation) fires while the save is still in-flight.
+    await this.page.locator('#dialogSave, #dialogSaveSuper')
+      .waitFor({ state: 'hidden', timeout: 15000 }).catch(() => {});
   }
 
   async typeSearchInput(customerName: string) {
     await this.waitOverlayClosed(30000);
     const input = this.elements.searchInput();
     await input.fill(customerName, { force: true });
+    // Wait for the list to filter before returning so the caller's next action
+    // (clickToogle) targets the correct customer card, not an unfiltered row.
+    await this.page.locator('dex-settings-customer')
+      .filter({ hasText: customerName })
+      .first()
+      .waitFor({ state: 'visible', timeout: 15000 })
+      .catch(() => {});
   }
 
   async clickToogle() {

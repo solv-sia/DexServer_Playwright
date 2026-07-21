@@ -19,7 +19,7 @@ test.describe('Crear cliente y activarlo', () => {
     const globalPage = new GlobalPage(page);
     const customerPage = new CustomerPage(page);
 
-    await loginWithSession(page, config.userName, config.password);
+    await loginWithSession(page, config.userName, config.password, config.clientName);
     await globalPage.clickMenuSetting();
     await globalPage.clickOptionCustomer();
 
