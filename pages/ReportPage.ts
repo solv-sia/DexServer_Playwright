@@ -34,10 +34,10 @@ export class ReportPage extends BasePage {
   }
 
   async verifyEventPOPs(playerName: string, mediaComponent1: string, mediaComponent2: string, playlist: string) {
-    await this.page.waitForTimeout(1000);
     const rows = this.elements.rowTable();
+    // Wait up to 15s for at least one row — report loads asynchronously after clicking Report.
+    await rows.first().waitFor({ state: 'attached', timeout: 15000 }).catch(() => {});
     const count = await rows.count();
     if (count === 0) throw new Error('No POP events found in report');
-    // Basic verification: at least one row exists (full validation depends on data availability)
   }
 }
