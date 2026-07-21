@@ -20,6 +20,7 @@ test.describe('Configurar media reemplazando tags y validar propagacion', () => 
     await loginWithSession(page, config.userName2, config.password);
 
     await globalPage.clickOnMediaLibraryHeader();
+    await globalPage.waitSpinner();
     await mediaLibraryPage.typeSearchMediaInput2(config.mediaToChangePath);
     await mediaLibraryPage.findBottomFolder(config.mediaToChangePath);
 
@@ -34,7 +35,17 @@ test.describe('Configurar media reemplazando tags y validar propagacion', () => 
           }
           return results;
         }
-        return findAll(document, 'dex-media-card[slot="card"]').some(c => (c.textContent ?? '').includes(name));
+        function deepText(node: Node): string {
+          let t = (node as Element).getAttribute?.('title') ?? '';
+          const sr = (node as any).shadowRoot as ShadowRoot | null;
+          if (sr) t += deepText(sr);
+          for (const child of Array.from(node.childNodes)) {
+            if (child.nodeType === 3) t += child.textContent ?? '';
+            else if (child.nodeType === 1) t += deepText(child);
+          }
+          return t;
+        }
+        return findAll(document, 'dex-media-card[slot="card"]').some(c => deepText(c).includes(name));
       },
       config.mediaToChange,
       { timeout: 15000 }
@@ -53,14 +64,23 @@ test.describe('Configurar media reemplazando tags y validar propagacion', () => 
     await mediaLibraryPage.clearInclusionTags();
     await mediaLibraryPage.clearProductTags();
 
-    // Configurar nuevas etiquetas
+    // Configurar nuevas etiquetas — scroll+fill+press directo sobre el locator
     const inclusionInput = page.locator("dex-textarea-tags#inclusionInput vaadin-text-field input");
-    await inclusionInput.fill('TAG_REEMPAZO', { force: true });
+    await inclusionInput.scrollIntoViewIfNeeded();
+    await inclusionInput.click();
+    await page.waitForTimeout(200);
+    await inclusionInput.fill('TAG_REEMPAZO');
     await inclusionInput.press('Enter');
+    await page.waitForTimeout(300);
 
     const exclusionInput = page.locator("dex-textarea-tags#exclusionInput vaadin-text-field input");
-    await exclusionInput.fill('TAG_REEMPAZO_NO', { force: true });
+    await exclusionInput.scrollIntoViewIfNeeded();
+    await exclusionInput.click();
+    await page.waitForTimeout(200);
+    await exclusionInput.fill('TAG_REEMPAZO_NO');
     await exclusionInput.press('Enter');
+    await page.waitForTimeout(500);
+    await globalPage.waitSpinner();
 
     // Verificar que el botón Guardar esté habilitado antes de hacer click
     const saveEnabled = await mediaLibraryPage.getStatusSaveButton();
@@ -86,6 +106,7 @@ test.describe('Configurar media reemplazando tags y validar propagacion', () => 
     await mediaLibraryPage.clickConfirmButton();
 
     await globalPage.clickPlaylist();
+    await globalPage.waitSpinner();
     await playlistPage.searchPlaylist(config.listaPLPropagacion[0]);
     await playlistPage.clickResultingPlaylist();
     await playlistPage.clickMediaInchannelInPosition(1, 1);

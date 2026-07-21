@@ -39,20 +39,9 @@ export class MediaLibraryPage extends BasePage {
     const subfolders = ruta.split('/');
     for (let i = 0; i < subfolders.length; i++) {
       const folder = subfolders[i];
-      await this.page.waitForFunction((title: string) => {
-        function findInShadow(root: Document | ShadowRoot, sel: string): Element | null {
-          const found = root.querySelector(sel);
-          if (found) return found;
-          for (const el of root.querySelectorAll('*')) {
-            const sr = (el as Element & { shadowRoot?: ShadowRoot }).shadowRoot;
-            if (sr) { const r = findInShadow(sr, sel); if (r) return r; }
-          }
-          return null;
-        }
-        return !!findInShadow(document, `div[title='${title}']`);
-      }, folder, { timeout: 10000 });
 
-      await this.page.evaluate((title: string) => {
+      // Atomic: find, scroll into view, and click the folder in the same poll.
+      await this.page.waitForFunction((title: string) => {
         function findInShadow(root: Document | ShadowRoot, sel: string): HTMLElement | null {
           const found = root.querySelector(sel) as HTMLElement | null;
           if (found) return found;
@@ -63,10 +52,14 @@ export class MediaLibraryPage extends BasePage {
           return null;
         }
         const el = findInShadow(document, `div[title='${title}']`);
-        if (el) el.click();
-      }, folder);
+        if (!el) return false;
+        el.scrollIntoView({ block: 'center' });
+        el.click();
+        return true;
+      }, folder, { timeout: 15000 });
 
-      // After clicking, wait for next subfolder or for media cards to appear
+      // After clicking, wait for next subfolder or for media cards to appear.
+      // Retry the click if cards don't appear — server load after propagation can delay response.
       const nextFolder = subfolders[i + 1];
       if (nextFolder) {
         await this.page.waitForFunction((title: string) => {
@@ -80,9 +73,10 @@ export class MediaLibraryPage extends BasePage {
             return null;
           }
           return !!findInShadow(document, `div[title='${title}']`);
-        }, nextFolder, { timeout: 8000 }).catch(() => {});
+        }, nextFolder, { timeout: 10000 }).catch(() => {});
       } else {
-        await this.page.waitForFunction(() => {
+        // Wait up to 20s for cards; if none appear, re-click and wait again (handles busy server).
+        const hasCards = await this.page.waitForFunction(() => {
           function findAll(root: Document | ShadowRoot, sel: string): Element[] {
             const results = Array.from(root.querySelectorAll(sel));
             for (const el of root.querySelectorAll('*')) {
@@ -92,7 +86,39 @@ export class MediaLibraryPage extends BasePage {
             return results;
           }
           return findAll(document, 'dex-media-card[slot="card"]').length > 0;
-        }, { timeout: 8000 }).catch(() => {});
+        }, { timeout: 20000 }).then(() => true).catch(() => false);
+
+        if (!hasCards) {
+          // Re-click the folder (initial click may have only expanded the tree node).
+          await this.page.waitForFunction((title: string) => {
+            function findInShadow(root: Document | ShadowRoot, sel: string): HTMLElement | null {
+              const found = root.querySelector(sel) as HTMLElement | null;
+              if (found) return found;
+              for (const el of root.querySelectorAll('*')) {
+                const sr = (el as Element & { shadowRoot?: ShadowRoot }).shadowRoot;
+                if (sr) { const r = findInShadow(sr, sel); if (r) return r; }
+              }
+              return null;
+            }
+            const el = findInShadow(document, `div[title='${title}']`);
+            if (!el) return false;
+            el.scrollIntoView({ block: 'center' });
+            el.click();
+            return true;
+          }, folder, { timeout: 5000 }).catch(() => {});
+
+          await this.page.waitForFunction(() => {
+            function findAll(root: Document | ShadowRoot, sel: string): Element[] {
+              const results = Array.from(root.querySelectorAll(sel));
+              for (const el of root.querySelectorAll('*')) {
+                const sr = (el as Element & { shadowRoot?: ShadowRoot }).shadowRoot;
+                if (sr) results.push(...findAll(sr, sel));
+              }
+              return results;
+            }
+            return findAll(document, 'dex-media-card[slot="card"]').length > 0;
+          }, { timeout: 20000 }).catch(() => {});
+        }
       }
     }
   }
@@ -166,9 +192,16 @@ export class MediaLibraryPage extends BasePage {
   async clickOnMedia(name: string) {
     const baseline = this._cardCountBeforeDrop;
 
+    // Clicking inside waitForFunction causes a hash navigation (#!/media → #!/media/ID)
+    // which fires Page.frameNavigated in CDP. Playwright restarts the waitForFunction poll,
+    // ignoring the returned `true`, causing an infinite retry loop.
+    // Fix: separate detection (waitForFunction, no click) from clicking (evaluate, one-shot).
+
+    // Step 1: Wait until a VISIBLE card containing the media name is on screen.
+    // Checks getBoundingClientRect > 0 to skip stale/hidden cards that exist in the
+    // DOM but have no visual presence. deepText is only computed for visible cards.
     await this.page.waitForFunction(
       ({ mediaName, baseline }: { mediaName: string; baseline: number }) => {
-        // querySelectorAll does NOT pierce shadow DOM — need manual traversal
         function findAllCards(root: Document | ShadowRoot): HTMLElement[] {
           const results: HTMLElement[] = [];
           results.push(...Array.from(root.querySelectorAll('dex-media-card[slot="card"]')) as HTMLElement[]);
@@ -179,52 +212,79 @@ export class MediaLibraryPage extends BasePage {
           return results;
         }
         function deepText(node: Node): string {
-          let t = '';
-          if ((node as Element).getAttribute) t += (node as Element).getAttribute('title') || '';
+          let t = (node as Element).getAttribute?.('title') ?? '';
           const sr = (node as Element & { shadowRoot?: ShadowRoot }).shadowRoot;
           if (sr) t += deepText(sr);
           for (const child of Array.from(node.childNodes)) {
-            if (child.nodeType === 3) t += child.textContent || '';
+            if (child.nodeType === 3) t += child.textContent ?? '';
             else if (child.nodeType === 1) t += deepText(child);
           }
           return t;
         }
         const cards = findAllCards(document);
-        if (cards.length > baseline) return true;
-        return cards.some(c => deepText(c).includes(mediaName));
+        if (cards.length === 0) return false;
+        // Only consider visible cards (rect.width > 0)
+        const visible = cards.filter(c => (c as HTMLElement).getBoundingClientRect().width > 0);
+        if (visible.some(c => deepText(c).includes(mediaName))) return true;
+        // Fallback for newly dropped files (dropFile sets baseline > 0)
+        if (baseline > 0 && cards.length > baseline) return true;
+        return false;
       },
       { mediaName: name, baseline },
-      { timeout: 300000 }
+      { timeout: 30000 }
     );
 
-    await this.page.evaluate((mediaName: string) => {
-      function findAllCards(root: Document | ShadowRoot): HTMLElement[] {
-        const results: HTMLElement[] = [];
-        results.push(...Array.from(root.querySelectorAll('dex-media-card[slot="card"]')) as HTMLElement[]);
-        for (const el of Array.from(root.querySelectorAll('*'))) {
-          const sr = (el as Element & { shadowRoot?: ShadowRoot }).shadowRoot;
-          if (sr) results.push(...findAllCards(sr));
+    // Step 2: Among visible matching cards, pick the one where mediaName appears earliest
+    // in deepText (that card's OWN name is mediaName; other cards merely reference it later).
+    // Return center coordinates and click via page.mouse.click() for a real browser click
+    // that activates Polymer pointer/mouse event handlers.
+    const coords = await this.page.evaluate(
+      ({ mediaName, baseline }: { mediaName: string; baseline: number }) => {
+        function findAllCards(root: Document | ShadowRoot): HTMLElement[] {
+          const results: HTMLElement[] = [];
+          results.push(...Array.from(root.querySelectorAll('dex-media-card[slot="card"]')) as HTMLElement[]);
+          for (const el of Array.from(root.querySelectorAll('*'))) {
+            const sr = (el as Element & { shadowRoot?: ShadowRoot }).shadowRoot;
+            if (sr) results.push(...findAllCards(sr));
+          }
+          return results;
         }
-        return results;
-      }
-      function deepText(node: Node): string {
-        let t = '';
-        if ((node as Element).getAttribute) t += (node as Element).getAttribute('title') || '';
-        const sr = (node as Element & { shadowRoot?: ShadowRoot }).shadowRoot;
-        if (sr) t += deepText(sr);
-        for (const child of Array.from(node.childNodes)) {
-          if (child.nodeType === 3) t += child.textContent || '';
-          else if (child.nodeType === 1) t += deepText(child);
+        function deepText(node: Node): string {
+          let t = (node as Element).getAttribute?.('title') ?? '';
+          const sr = (node as Element & { shadowRoot?: ShadowRoot }).shadowRoot;
+          if (sr) t += deepText(sr);
+          for (const child of Array.from(node.childNodes)) {
+            if (child.nodeType === 3) t += child.textContent ?? '';
+            else if (child.nodeType === 1) t += deepText(child);
+          }
+          return t;
         }
-        return t;
-      }
-      const cards = findAllCards(document);
-      // Try to find by name first, fallback to last card
-      const match = cards.find(c => deepText(c).includes(mediaName));
-      const target = match ?? cards[cards.length - 1];
-      if (target) target.click();
-      else throw new Error('No media cards found after upload');
-    }, name);
+        const cards = findAllCards(document);
+
+        // Fallback for newly dropped files
+        if (baseline > 0 && cards.length > baseline) {
+          const rect = cards[cards.length - 1].getBoundingClientRect();
+          if (rect.width > 0) return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+        }
+
+        // Only visible cards; sort by earliest occurrence to pick the card whose OWN name
+        // is mediaName (not a card that merely references it, e.g. "bound" → "madre").
+        const matching = cards
+          .filter(c => {
+            const rect = (c as HTMLElement).getBoundingClientRect();
+            return rect.width > 0 && deepText(c).includes(mediaName);
+          });
+        if (matching.length === 0) return null;
+        matching.sort((a, b) => deepText(a).indexOf(mediaName) - deepText(b).indexOf(mediaName));
+        const rect = (matching[0] as HTMLElement).getBoundingClientRect();
+        return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+      },
+      { mediaName: name, baseline }
+    );
+
+    if (coords) {
+      await this.page.mouse.click(coords.x, coords.y);
+    }
   }
 
   async checkMediaFormat(expectedFormat: string) {
@@ -261,24 +321,58 @@ export class MediaLibraryPage extends BasePage {
     await input.fill(second, { force: true });
   }
 
-  async removeAllTagsFromInput(containerLocator: ReturnType<typeof this.page.locator>) {
-    const closeBtns = containerLocator.locator("paper-icon-button[icon='icons:close']");
-    while (await closeBtns.count() > 0) {
-      await closeBtns.first().click({ force: true });
-      await this.page.waitForTimeout(100);
+  async removeAllTagsFromInput(containerSelector: string) {
+    // The container (e.g. dex-textarea-tags#inclusionInput) lives inside another
+    // shadow root, so document.querySelector() cannot find it. We must first
+    // recurse through all shadow roots to locate it, then search within IT for
+    // paper-icon-button[icon='icons:close'] close buttons (also shadow-rooted).
+    await this.page.waitForTimeout(500); // allow chips to render
+    for (let attempt = 0; attempt < 25; attempt++) {
+      const remaining = await this.page.evaluate((sel: string) => {
+        function findInShadow(root: Document | ShadowRoot | Element, selector: string): Element | null {
+          const found = (root as Element).querySelector?.(selector) ?? null;
+          if (found) return found;
+          for (const el of Array.from(root.querySelectorAll('*'))) {
+            const sr = (el as any).shadowRoot as ShadowRoot | null;
+            if (sr) { const r = findInShadow(sr, selector); if (r) return r; }
+          }
+          return null;
+        }
+        function searchShadow(root: Element | ShadowRoot): HTMLElement[] {
+          const results: HTMLElement[] = [];
+          for (const el of Array.from(root.querySelectorAll('*'))) {
+            const e = el as HTMLElement;
+            // dex-tag-item close buttons are paper-icon-button with class="icon" (no icon= attribute)
+            if (e.tagName?.toLowerCase() === 'paper-icon-button' && e.classList?.contains('icon')) {
+              results.push(e);
+            }
+            if ((e as any).shadowRoot) results.push(...searchShadow((e as any).shadowRoot));
+          }
+          return results;
+        }
+        const container = findInShadow(document, sel);
+        if (!container) return -1; // container not found
+        const buttons = [...searchShadow(container as Element)];
+        if ((container as any).shadowRoot) buttons.push(...searchShadow((container as any).shadowRoot));
+        if (buttons.length === 0) return 0;
+        buttons[0].click();
+        return buttons.length;
+      }, containerSelector);
+      if (remaining <= 0) break; // 0 = no more chips, -1 = container not found
+      await this.page.waitForTimeout(400);
     }
   }
 
   async clearInclusionTags() {
-    await this.removeAllTagsFromInput(this.page.locator("dex-textarea-tags#inclusionInput"));
+    await this.removeAllTagsFromInput("dex-textarea-tags#inclusionInput");
   }
 
   async clearExclusionTags() {
-    await this.removeAllTagsFromInput(this.page.locator("dex-textarea-tags#exclusionInput"));
+    await this.removeAllTagsFromInput("dex-textarea-tags#exclusionInput");
   }
 
   async clearProductTags() {
-    await this.removeAllTagsFromInput(this.page.locator("dex-product-combo"));
+    await this.removeAllTagsFromInput("dex-product-combo");
   }
 
   async clickBtnClearFromDateInput() {
@@ -294,22 +388,30 @@ export class MediaLibraryPage extends BasePage {
   }
 
   async clearFromHourInput() {
-    const input = this.page.locator("paper-input.flex.input").nth(0).locator("input[autocomplete='off']");
+    const timeInputs = this.page.locator("paper-input[type='time']");
+    if (await timeInputs.count() < 1) return;
+    const input = timeInputs.nth(0).locator("input[autocomplete='off']");
     await input.fill('', { force: true });
   }
 
   async clearToHourInput() {
-    const input = this.page.locator("paper-input.flex.input").nth(1).locator("input[autocomplete='off']");
+    const timeInputs = this.page.locator("paper-input[type='time']");
+    if (await timeInputs.count() < 2) return;
+    const input = timeInputs.nth(1).locator("input[autocomplete='off']");
     await input.fill('', { force: true });
   }
 
   async clearFromHourRecurenceInput() {
-    const input = this.page.locator("paper-input.flex.input").nth(2).locator("input[autocomplete='off']");
+    const timeInputs = this.page.locator("paper-input[type='time']");
+    if (await timeInputs.count() < 3) return;
+    const input = timeInputs.nth(2).locator("input[autocomplete='off']");
     await input.fill('', { force: true });
   }
 
   async clearToHourRecurenceInput() {
-    const input = this.page.locator("paper-input.flex.input").nth(3).locator("input[autocomplete='off']");
+    const timeInputs = this.page.locator("paper-input[type='time']");
+    if (await timeInputs.count() < 4) return;
+    const input = timeInputs.nth(3).locator("input[autocomplete='off']");
     await input.fill('', { force: true });
   }
 
@@ -332,31 +434,67 @@ export class MediaLibraryPage extends BasePage {
   }
 
   async clickSaveButton() {
-    await this.page.locator("[icon='save']").click();
+    await this.page.locator("[icon='save']").dispatchEvent('click');
   }
 
   async clickCheckboxSelectAllPlaylist() {
-    // dispatchEvent evita el check de bounding-box — el checkbox puede tener área cero al abrir el diálogo
-    await this.page.locator('paper-checkbox').filter({ hasText: /seleccionar todo|select all/i }).nth(0).dispatchEvent('click');
+    // Hay múltiples "Seleccionar Todos" en el DOM (en diálogos ocultos).
+    // El filtro visible:true apunta solo al del diálogo activo (rect > 0).
+    const cb = this.page.locator('paper-checkbox')
+      .filter({ hasText: /seleccionar todo|select all/i })
+      .filter({ visible: true })
+      .first();
+    await cb.waitFor({ state: 'visible', timeout: 15000 });
+    const isChecked = await cb.evaluate((el: any) => el.getAttribute('aria-checked') === 'true');
+    if (!isChecked) await cb.dispatchEvent('click');
   }
 
   async clickNextButton() {
-    await this.page.locator('paper-button').filter({ hasText: /siguiente|next/i }).first().click();
+    // El DOM tiene múltiples "Siguiente" en diálogos ocultos (disabled, rect=0).
+    // El filtro visible:true apunta solo al del diálogo activo.
+    const btn = this.page.locator('paper-button')
+      .filter({ hasText: /siguiente|next/i })
+      .filter({ visible: true })
+      .first();
+    await btn.waitFor({ state: 'visible', timeout: 15000 });
+    await btn.click();
     await this.page.waitForTimeout(500);
   }
 
   async clickNextButton2() {
-    await this.page.locator('paper-button').filter({ hasText: /siguiente|next/i }).nth(1).click();
+    const btn = this.page.locator('paper-button')
+      .filter({ hasText: /siguiente|next/i })
+      .filter({ visible: true })
+      .first();
+    await btn.waitFor({ state: 'visible', timeout: 15000 });
+    await btn.click();
     await this.page.waitForTimeout(500);
   }
 
   async clickOnAllCheckboxes() {
-    const checkboxes = this.page.locator('paper-checkbox');
+    // Esperar a que aparezca el paso 2 del wizard (al menos un checkbox visible y sin marcar)
+    await this.page.waitForFunction(() => {
+      function findAll(root: Document | ShadowRoot, sel: string): Element[] {
+        const r = Array.from(root.querySelectorAll(sel));
+        for (const el of Array.from(root.querySelectorAll('*'))) {
+          const sr = (el as any).shadowRoot as ShadowRoot | null;
+          if (sr) r.push(...findAll(sr, sel));
+        }
+        return r;
+      }
+      return findAll(document, 'paper-checkbox').some(
+        c => c.getAttribute('aria-checked') === 'false' &&
+             (c as HTMLElement).getBoundingClientRect().width > 0
+      );
+    }, { timeout: 15000 });
+
+    // Solo checkboxes visibles (rect > 0) — excluye los de diálogos ocultos y paneles colapsados
+    const checkboxes = this.page.locator('paper-checkbox').filter({ visible: true });
     const count = await checkboxes.count();
     for (let i = 0; i < count; i++) {
       const cb = checkboxes.nth(i);
-      const checked = await cb.evaluate((el) => el.getAttribute('aria-checked') === 'true');
-      if (!checked) await cb.click({ force: true });
+      const checked = await cb.evaluate((el: any) => el.getAttribute('aria-checked') === 'true');
+      if (!checked) await cb.dispatchEvent('click');
     }
   }
 
@@ -387,15 +525,78 @@ export class MediaLibraryPage extends BasePage {
   }
 
   async compareFullMessage(pattern: RegExp) {
-    const text = await this.page.locator('paper-dialog').last().textContent();
-    if (!pattern.test(text ?? '')) throw new Error(`Message does not match ${pattern}: "${text}"`);
+    // El texto de confirmación está dentro del shadow DOM de componentes hijo del paper-dialog.
+    // d.textContent no lo ve. Se usa deepText para traversar shadow roots.
+    // La visibilidad se comprueba con getBoundingClientRect (no con [opened] que puede removerse
+    // durante la transición entre pasos del wizard).
+    await this.page.waitForFunction((pat: string) => {
+      function findAll(root: Document | ShadowRoot, sel: string): Element[] {
+        const r = Array.from(root.querySelectorAll(sel));
+        for (const el of Array.from(root.querySelectorAll('*'))) {
+          const sr = (el as any).shadowRoot as ShadowRoot | null;
+          if (sr) r.push(...findAll(sr, sel));
+        }
+        return r;
+      }
+      function deepText(node: Node): string {
+        let t = '';
+        if ((node as Element).getAttribute) t += (node as Element).getAttribute('title') || '';
+        const sr = (node as any).shadowRoot as ShadowRoot | null;
+        if (sr) t += deepText(sr);
+        for (const c of Array.from(node.childNodes)) {
+          if (c.nodeType === 3) t += c.textContent || '';
+          else if (c.nodeType === 1) t += deepText(c);
+        }
+        return t;
+      }
+      return findAll(document, 'paper-dialog').some(d => {
+        const rect = (d as HTMLElement).getBoundingClientRect();
+        return rect.width > 0 && new RegExp(pat).test(deepText(d));
+      });
+    }, pattern.source, { timeout: 15000 }).catch(() => {});
+
+    const text = await this.page.evaluate((pat: string) => {
+      function findAll(root: Document | ShadowRoot, sel: string): Element[] {
+        const r = Array.from(root.querySelectorAll(sel));
+        for (const el of Array.from(root.querySelectorAll('*'))) {
+          const sr = (el as any).shadowRoot as ShadowRoot | null;
+          if (sr) r.push(...findAll(sr, sel));
+        }
+        return r;
+      }
+      function deepText(node: Node): string {
+        let t = '';
+        if ((node as Element).getAttribute) t += (node as Element).getAttribute('title') || '';
+        const sr = (node as any).shadowRoot as ShadowRoot | null;
+        if (sr) t += deepText(sr);
+        for (const c of Array.from(node.childNodes)) {
+          if (c.nodeType === 3) t += c.textContent || '';
+          else if (c.nodeType === 1) t += deepText(c);
+        }
+        return t;
+      }
+      for (const d of findAll(document, 'paper-dialog')) {
+        const rect = (d as HTMLElement).getBoundingClientRect();
+        if (rect.width > 0) {
+          const t = deepText(d);
+          if (new RegExp(pat).test(t)) return t;
+        }
+      }
+      return '';
+    }, pattern.source);
+
+    if (!pattern.test(text)) throw new Error(`Message does not match ${pattern}: "${text}"`);
   }
 
   async rightClickOnMedia(mediaName: string) {
     const card = this.page.locator(`dex-media-card[title="${mediaName}"]`)
       .or(this.page.locator('dex-media-card').filter({ hasText: mediaName }))
       .first();
-    await card.waitFor({ state: 'visible', timeout: 15000 });
+    // Esperar a que el card esté en DOM con timeout extendido (la lista puede cargar lento)
+    await card.waitFor({ state: 'attached', timeout: 30000 });
+    // Traer el card a la vista (puede estar fuera del viewport en listas largas)
+    await card.scrollIntoViewIfNeeded().catch(() => {});
+    await card.waitFor({ state: 'visible', timeout: 10000 });
     const box = await card.boundingBox();
     if (!box) throw new Error(`No bounding box for media card: ${mediaName}`);
     await this.page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);

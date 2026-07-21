@@ -18,6 +18,7 @@ test.describe('Limpiar todos los condicionales de una media utilizada por mas de
     await loginWithSession(page, config.userName2, config.password);
 
     await globalPage.clickOnMediaLibraryHeader();
+    await globalPage.waitSpinner();
     await mediaLibraryPage.typeSearchMediaInput2(config.mediaToChangePath);
     await mediaLibraryPage.findBottomFolder(config.mediaToChangePath);
 
@@ -32,7 +33,17 @@ test.describe('Limpiar todos los condicionales de una media utilizada por mas de
           }
           return results;
         }
-        return findAll(document, 'dex-media-card[slot="card"]').some(c => (c.textContent ?? '').includes(name));
+        function deepText(node: Node): string {
+          let t = (node as Element).getAttribute?.('title') ?? '';
+          const sr = (node as any).shadowRoot as ShadowRoot | null;
+          if (sr) t += deepText(sr);
+          for (const child of Array.from(node.childNodes)) {
+            if (child.nodeType === 3) t += child.textContent ?? '';
+            else if (child.nodeType === 1) t += deepText(child);
+          }
+          return t;
+        }
+        return findAll(document, 'dex-media-card[slot="card"]').some(c => deepText(c).includes(name));
       },
       config.mediaToChange,
       { timeout: 15000 }
@@ -58,16 +69,6 @@ test.describe('Limpiar todos los condicionales de una media utilizada por mas de
 
     await mediaLibraryPage.clickBtnClearFromDateInput();
     await mediaLibraryPage.clickBtnClearToDateInput();
-
-    // Verificar que los campos de hora existen antes de intentar limpiarlos
-    const hourInputCount = await page.locator("paper-input.flex.input").count();
-    if (hourInputCount === 0) {
-      throw new Error(
-        '[BUG APP CP47PP] Los campos de hora de programación (paper-input.flex.input) ' +
-        'no existen en el panel de detalle de media. ' +
-        'La UI del panel de condicionales de fecha/hora puede haber sido rediseñada en esta versión de la aplicación.'
-      );
-    }
 
     await mediaLibraryPage.clearFromHourInput();
     await mediaLibraryPage.clearToHourInput();

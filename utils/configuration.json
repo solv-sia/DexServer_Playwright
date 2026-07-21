@@ -121,6 +121,7 @@
   "storeLocation": "CABA",
   "storeStatusInput": "Habilitado",
   "supertenantName": "* SUPER TENANT QA AUTOMATION",
+  "clientNameForSuperTenant": "ARG - QA Automation",
   "PL_CP40PP": "(QA Automation) PL CP40PP",
   "fileToDelete1": "VIDEO_MCD",
   "fileToDelete2": "IMG_MCD",

@@ -174,6 +174,7 @@ const config = {
 
   // CP44PP
   supertenantName: configJson.supertenantName,
+  clientNameForSuperTenant: configJson.clientNameForSuperTenant,
 
   // CP46PP
   machineId: configJson.machineId,

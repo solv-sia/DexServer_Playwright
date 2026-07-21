@@ -1,10 +1,38 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import axios from 'axios';
 import { v1 as uuidv1 } from 'uuid';
+import { SqlServerService } from '../sqlserver/sqlserver.service';
 
 @Injectable()
 export class PlayerService {
-  async createPlayer(baseUrl: string, activationKey: string, name?: string): Promise<any> {
+  constructor(private readonly sqlServer: SqlServerService) {}
+
+  // Resuelve la activation key del tenant desde la BD cuando solo se tiene el customerId.
+  private async getActivationKeyByCustomerId(dbKey: string, customerId: number): Promise<string> {
+    const pool = await this.sqlServer.getPool(dbKey);
+    const result = await pool
+      .request()
+      .input('customerId', customerId)
+      .query('SELECT TOP 1 ActivationKey FROM Customer WHERE CustomerId = @customerId');
+
+    const row = result.recordset[0];
+    if (!row?.ActivationKey) {
+      throw new BadRequestException(`No se encontró ActivationKey para customerId ${customerId} en la BD "${dbKey}"`);
+    }
+    return row.ActivationKey as string;
+  }
+
+  async createPlayer(baseUrl: string, activationKeyOrCustomerId: { activationKey?: string; customerId?: number; dbKey?: string }, name?: string): Promise<any> {
+    let activationKey = activationKeyOrCustomerId.activationKey;
+
+    if (!activationKey) {
+      const { customerId, dbKey } = activationKeyOrCustomerId;
+      if (!customerId || !dbKey) {
+        throw new BadRequestException('Se requiere activationKey o bien customerId+dbKey');
+      }
+      activationKey = await this.getActivationKeyByCustomerId(dbKey, customerId);
+    }
+
     const serialNumber = uuidv1();
     const url = `${baseUrl}/DexFrontend/api/v3/doHandshake`;
 
@@ -41,9 +69,6 @@ export class PlayerService {
     messageKey: string,
     machineId: number,
   ): Promise<{ success: boolean; filesUpdated: number }> {
-    // Trigger a heartbeat so DexServer registers the player as active.
-    // Real download progress is reported by the player via heartbeat body;
-    // for a headless virtual player we just send an empty heartbeat.
     const heartbeatUrl = `${baseUrl}/DexFrontend/api/v3/heartBeatSync/${machineId}/${messageKey}`;
     await axios.post(heartbeatUrl, {}, { validateStatus: () => true });
 

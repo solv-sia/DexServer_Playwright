@@ -20,6 +20,7 @@ test.describe('Configurar ajustes generales de media y validar propagacion', () 
     await loginWithSession(page, config.userName2, config.password);
 
     await globalPage.clickOnMediaLibraryHeader();
+    await globalPage.waitSpinner();
     await mediaLibraryPage.typeSearchMediaInput2(config.mediaToChangePath);
     await mediaLibraryPage.findBottomFolder(config.mediaToChangePath);
 
@@ -34,7 +35,17 @@ test.describe('Configurar ajustes generales de media y validar propagacion', () 
           }
           return results;
         }
-        return findAll(document, 'dex-media-card[slot="card"]').some(c => (c.textContent ?? '').includes(name));
+        function deepText(node: Node): string {
+          let t = (node as Element).getAttribute?.('title') ?? '';
+          const sr = (node as any).shadowRoot as ShadowRoot | null;
+          if (sr) t += deepText(sr);
+          for (const child of Array.from(node.childNodes)) {
+            if (child.nodeType === 3) t += child.textContent ?? '';
+            else if (child.nodeType === 1) t += deepText(child);
+          }
+          return t;
+        }
+        return findAll(document, 'dex-media-card[slot="card"]').some(c => deepText(c).includes(name));
       },
       config.mediaToChange,
       { timeout: 15000 }
@@ -69,6 +80,7 @@ test.describe('Configurar ajustes generales de media y validar propagacion', () 
     }
 
     await globalPage.clickPlaylist();
+    await globalPage.waitSpinner();
     await playlistPage.searchPlaylist(config.listaPLPropagacion[0]);
     await playlistPage.clickResultingPlaylist();
     await page.screenshot({ path: 'screenshots/cp52pp.png' });

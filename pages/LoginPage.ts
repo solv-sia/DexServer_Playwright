@@ -39,8 +39,9 @@ export class LoginPage extends BasePage {
     await this.typeUsername(userName);
     await this.typePassword(password);
     await this.clickLogin();
-    // Wait for spinner to disappear (app fully loaded)
-    await expect(this.page.locator('#main')).toHaveCSS('display', 'none', { timeout: 60000 });
+    // Wait for spinner to disappear (app fully loaded). Usar el selector específico
+    // para evitar strict mode violation — hay múltiples #main en la app.
+    await expect(this.page.locator('#dexloader #main')).toHaveCSS('display', 'none', { timeout: 60000 });
     if (verify) {
       await this.verifyDashboard();
     }

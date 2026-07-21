@@ -20,6 +20,7 @@ test.describe('Configurar media con tags y validar propagacion', () => {
     await loginWithSession(page, config.userName2, config.password);
 
     await globalPage.clickOnMediaLibraryHeader();
+    await globalPage.waitSpinner();
     await mediaLibraryPage.typeSearchMediaInput2(config.mediaToChangePath);
     await mediaLibraryPage.findBottomFolder(config.mediaToChangePath);
 
@@ -34,7 +35,17 @@ test.describe('Configurar media con tags y validar propagacion', () => {
           }
           return results;
         }
-        return findAll(document, 'dex-media-card[slot="card"]').some(c => (c.textContent ?? '').includes(name));
+        function deepText(node: Node): string {
+          let t = (node as Element).getAttribute?.('title') ?? '';
+          const sr = (node as any).shadowRoot as ShadowRoot | null;
+          if (sr) t += deepText(sr);
+          for (const child of Array.from(node.childNodes)) {
+            if (child.nodeType === 3) t += child.textContent ?? '';
+            else if (child.nodeType === 1) t += deepText(child);
+          }
+          return t;
+        }
+        return findAll(document, 'dex-media-card[slot="card"]').some(c => deepText(c).includes(name));
       },
       config.mediaToChange,
       { timeout: 15000 }
@@ -49,15 +60,23 @@ test.describe('Configurar media con tags y validar propagacion', () => {
     await mediaLibraryPage.clickOnMedia(config.mediaToChange);
     await page.waitForTimeout(500);
 
-    // Configurar etiqueta de inclusión
+    // Configurar etiqueta de inclusión — scroll+fill+press directo sobre el locator
     const inclusionInput = page.locator("dex-textarea-tags#inclusionInput vaadin-text-field input");
-    await inclusionInput.fill('REPRODUCIR', { force: true });
+    await inclusionInput.scrollIntoViewIfNeeded();
+    await inclusionInput.click();
+    await page.waitForTimeout(200);
+    await inclusionInput.fill('REPRODUCIR');
     await inclusionInput.press('Enter');
+    await page.waitForTimeout(300);
 
     // Configurar etiqueta de exclusión
     const exclusionInput = page.locator("dex-textarea-tags#exclusionInput vaadin-text-field input");
-    await exclusionInput.fill('NO REPRODUCIR', { force: true });
+    await exclusionInput.scrollIntoViewIfNeeded();
+    await exclusionInput.click();
+    await page.waitForTimeout(200);
+    await exclusionInput.fill('NO REPRODUCIR');
     await exclusionInput.press('Enter');
+    await page.waitForTimeout(500);
 
     const isEnabled = await mediaLibraryPage.getStatusSaveButton();
     if (isEnabled) {
@@ -74,6 +93,7 @@ test.describe('Configurar media con tags y validar propagacion', () => {
     }
 
     await globalPage.clickPlaylist();
+    await globalPage.waitSpinner();
     await playlistPage.searchPlaylist(config.listaPLPropagacion[0]);
     await playlistPage.clickResultingPlaylist();
     await playlistPage.clickMediaInchannelInPosition(1, 1);

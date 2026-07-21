@@ -24,7 +24,7 @@ test.describe('Búsqueda por superfiltro - Última actividad', () => {
     await networkPage.clickSuperFilterPopUp();
     await networkPage.typeInSuperFilterField('Última actividad', 0);
     await networkPage.typeInSuperFilterCondition('Mayor a', 0);
-    await networkPage.typeInSuperFilterDate('01/01/2020', 0);
+    await networkPage.typeInSuperFilterDate('2020-01-01', 0);
     await networkPage.clickSuperFilterApplyBtn();
     const count = await page.locator('#dexNetworkList dex-network-group').count();
     expect(count).toBeGreaterThanOrEqual(0);
@@ -37,10 +37,17 @@ test.describe('Búsqueda por superfiltro - Última actividad', () => {
     await networkPage.clickSuperFilterPopUp();
     await networkPage.typeInSuperFilterField('Última actividad', 0);
     await networkPage.typeInSuperFilterCondition('Menor a', 0);
-    await networkPage.typeInSuperFilterDate('01/01/2030', 0);
+    await networkPage.typeInSuperFilterDate('2030-01-01', 0);
     await networkPage.clickSuperFilterApplyBtn();
-    const count = await page.locator('#dexNetworkList dex-network-group').count();
-    expect(count).toBeGreaterThanOrEqual(0);
+    await page.waitForTimeout(1000);
+    const groupCount = await page.locator('#dexNetworkList dex-network-group').count();
+    const rowCount = await page.locator('#dexNetworkList tbody tr').count();
     await page.screenshot({ path: 'screenshots/cp68bpp.png' });
+    if (groupCount === 0 && rowCount === 0) {
+      throw new Error(
+        '[BUG APP CP68BPP] El superfiltro "Última actividad MENOR A 01/01/2030" devolvió 0 resultados. ' +
+        'Todos los players deberían aparecer ya que su última actividad fue antes del 01/01/2030.'
+      );
+    }
   });
 });

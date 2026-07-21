@@ -76,68 +76,71 @@ export class GlobalPage extends BasePage {
   async switchToNewTenant(client: string) {
     const combo = this.elements.comboTenant();
     await combo.waitFor({ state: 'visible' });
-    await combo.click();
+
+    const overlay = this.page.locator('vaadin-combo-box-overlay[theme~="customer"]');
+    await overlay.waitFor({ state: 'hidden', timeout: 3000 }).catch(() => {});
+
+    await combo.click({ force: true });
     await combo.clear();
-    await combo.press('Backspace');
-    await combo.pressSequentially(client, { delay: 100 });
+    await combo.fill(client, { force: true });
+    await overlay.waitFor({ state: 'visible', timeout: 10000 });
+    await this.page.waitForTimeout(500);
 
-    // Poll until filteredItems contains an exact match (vaadin filters asynchronously)
-    for (let attempt = 0; attempt < 20; attempt++) {
-      const hasMatch = await this.page.evaluate((val) => {
-        function findInShadow(root: Document | ShadowRoot, sel: string): Element | null {
-          const el = root.querySelector(sel);
-          if (el) return el;
-          for (const e of Array.from(root.querySelectorAll('*'))) {
-            const sr = (e as any).shadowRoot;
-            if (sr) { const f = findInShadow(sr, sel); if (f) return f; }
-          }
-          return null;
-        }
-        const c = findInShadow(document, '#customerDropdown') as any;
-        if (!c) return false;
-        return (c.filteredItems || []).some((i: any) => {
-          const label = typeof i === 'string' ? i : (i.label || String(i.value ?? ''));
-          return label.toLowerCase().includes(val.toLowerCase());
-        });
-      }, client);
-      if (hasMatch) break;
-      await this.page.waitForTimeout(150);
-    }
-
-    await this.page.evaluate((val) => {
-      function findInShadow(root: Document | ShadowRoot, sel: string): Element | null {
+    // Vaadin pre-focaliza el ítem actualmente seleccionado cuando el overlay se abre.
+    // Si ese ítem también aparece en la lista filtrada, ArrowDown lo salta en vez de
+    // ir al primero. Calculamos el delta y navegamos con precisión al ítem exacto.
+    const { exactIndex, focusedIndex } = await this.page.evaluate((clientName: string) => {
+      function deepFind(root: Document | ShadowRoot, sel: string): Element | null {
         const el = root.querySelector(sel);
         if (el) return el;
-        for (const e of Array.from(root.querySelectorAll('*'))) {
-          const sr = (e as any).shadowRoot;
-          if (sr) { const f = findInShadow(sr, sel); if (f) return f; }
+        for (const child of Array.from(root.querySelectorAll('*'))) {
+          const sr = (child as any).shadowRoot as ShadowRoot | null;
+          if (sr) {
+            const found = deepFind(sr, sel);
+            if (found) return found;
+          }
         }
         return null;
       }
-      const c = findInShadow(document, '#customerDropdown') as any;
-      if (!c) return;
-      const filtered: any[] = c.filteredItems || [];
-      // Prefer exact match to avoid selecting a tenant with a similar name
-      const match =
-        filtered.find((i: any) => {
-          const label = typeof i === 'string' ? i : (i.label || String(i.value ?? ''));
-          return label.toLowerCase() === val.toLowerCase();
-        }) ??
-        filtered.find((i: any) => {
-          const label = typeof i === 'string' ? i : (i.label || String(i.value ?? ''));
-          return label.toLowerCase().includes(val.toLowerCase());
-        }) ??
-        filtered[0];
-      if (!match) return;
-      c.selectedItem = match;
-      c.opened = false;
+      const combo = deepFind(document, '#customerDropdown') as any;
+      const filtered: any[] = combo?.filteredItems ?? [];
+      const labelPath: string = combo?.itemLabelPath ?? 'FullName';
+      const exactIndex: number = filtered.findIndex((i: any) => i[labelPath] === clientName);
+      const focusedIndex: number = typeof combo?._focusedIndex === 'number' ? combo._focusedIndex : -1;
+      return { exactIndex, focusedIndex };
     }, client);
+
+    if (exactIndex < 0) {
+      // Sin match exacto: ir al primer ítem y confirmar
+      await combo.press('ArrowDown');
+      await this.page.waitForTimeout(300);
+    } else if (focusedIndex < 0) {
+      // Sin pre-foco: primer ArrowDown va al índice 0; bajar exactIndex más
+      for (let i = 0; i <= exactIndex; i++) {
+        await combo.press('ArrowDown');
+        await this.page.waitForTimeout(80);
+      }
+    } else {
+      // Con pre-foco en focusedIndex: navegar el delta al índice exacto
+      const delta = exactIndex - focusedIndex;
+      const key = delta >= 0 ? 'ArrowDown' : 'ArrowUp';
+      for (let i = 0; i < Math.abs(delta); i++) {
+        await combo.press(key);
+        await this.page.waitForTimeout(80);
+      }
+    }
+
+    await combo.press('Enter');
+    await overlay.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
   }
 
   async loginDecision(password: string) {
+    // Esperar hasta 5s a que aparezca el diálogo de autorización de cambio de tenant.
+    // isVisible() no espera: puede correr antes que el diálogo se renderice.
     const passwordInput = this.page.locator('input[type="password"]');
-    const isVisible = await passwordInput.isVisible().catch(() => false);
-    if (isVisible) {
+    const appeared = await passwordInput.waitFor({ state: 'visible', timeout: 5000 })
+      .then(() => true).catch(() => false);
+    if (appeared) {
       await passwordInput.fill(password);
       await passwordInput.press('Enter');
       await this.waitSpinner();

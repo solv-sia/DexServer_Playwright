@@ -136,7 +136,23 @@ export class NetworkDetailPage extends BasePage {
     await input.dispatchEvent('focus');
     await input.fill(value, { force: true });
     await openOverlay.waitFor({ state: 'visible', timeout: 15000 });
-    await this.selectInOpenedCombo(value);
+
+    // Intentar click directo en el ítem del overlay (path principal)
+    const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const option = this.page.locator('vaadin-combo-box-overlay[opened] vaadin-combo-box-item')
+      .filter({ hasText: new RegExp(escaped, 'i') })
+      .first();
+    const clicked = await option.waitFor({ state: 'visible', timeout: 8000 })
+      .then(() => option.click().then(() => true))
+      .catch(() => false);
+
+    if (!clicked) {
+      // Fallback: ArrowDown + Enter pasa por el manejo de eventos de Polymer
+      // (la asignación JS directa esquiva el dirty-tracking y deja el botón guardar deshabilitado)
+      await input.press('ArrowDown');
+      await input.press('Enter');
+    }
+
     await openOverlay.waitFor({ state: 'hidden', timeout: 8000 }).catch(() => {});
     await this.page.waitForTimeout(300);
   }
@@ -287,6 +303,8 @@ export class NetworkDetailPage extends BasePage {
     const target = current.trim() === playlist ? backupPlaylist : playlist;
     this.plApplied = target;
     await this.fillPlaylistCombo(this.elements.plDefaultCombo(), target);
+    // El cambio de playlist puede re-renderizar el panel completo (igual que HP) — esperar que se estabilice
+    await this.waitForDetailPanel();
   }
 
   async setNewSchedule(schedule: string, backupSchedule: string) {

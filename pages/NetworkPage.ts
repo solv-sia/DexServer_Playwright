@@ -188,10 +188,17 @@ export class NetworkPage extends BasePage {
   }
 
   async typeInSuperFilterDate(date: string, index = 0) {
-    const input = this.page.locator('#advanceFilter dex-date-picker input, #rowFilter dex-date-picker input, #advanceFilter paper-input[type="date"] input').nth(index);
-    await input.click({ force: true });
-    await input.fill(date, { force: true });
-    await input.press('Enter');
+    // locator.evaluate() lets Playwright find the element (piercing shadow DOM) and execute
+    // in the browser with a real element reference — bypassing querySelectorAll limitations.
+    // We set the Polymer property directly and fire value-changed so the binding updates.
+    const picker = this.page.locator('dex-date-picker').nth(index);
+    await picker.waitFor({ state: 'attached', timeout: 5000 }).catch(() => {});
+    await picker.evaluate((el: any, date: string) => {
+      el.value = date;
+      if (typeof el.set === 'function') el.set('value', date);
+      el.dispatchEvent(new CustomEvent('value-changed', { detail: { value: date }, bubbles: true, composed: true }));
+    }, date);
+    await this.page.waitForTimeout(300);
   }
 
   async deleteGroup(groupName: string) {
@@ -231,5 +238,29 @@ export class NetworkPage extends BasePage {
   async clickConfirmButton() {
     await this.elements.confirmButton().click();
     await this.page.locator('#commandDialog').waitFor({ state: 'hidden', timeout: 8000 }).catch(() => {});
+  }
+
+  async getVisiblePlayerTexts(): Promise<string[]> {
+    return this.page.evaluate(() => {
+      function deepText(node: Node): string {
+        let t = (node as Element).getAttribute?.('title') ?? '';
+        const sr = (node as any).shadowRoot as ShadowRoot | null;
+        if (sr) t += deepText(sr);
+        for (const child of Array.from(node.childNodes)) {
+          if (child.nodeType === 3) t += child.textContent ?? '';
+          else if (child.nodeType === 1) t += deepText(child);
+        }
+        return t;
+      }
+      function findAll(root: Document | ShadowRoot, sel: string): Element[] {
+        const results = Array.from(root.querySelectorAll(sel));
+        for (const el of Array.from(root.querySelectorAll('*'))) {
+          const sr = (el as any).shadowRoot as ShadowRoot | null;
+          if (sr) results.push(...findAll(sr, sel));
+        }
+        return results;
+      }
+      return findAll(document, 'dex-network-display-card').map(c => deepText(c));
+    });
   }
 }

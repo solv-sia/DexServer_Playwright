@@ -30,8 +30,20 @@ function buildHeaders(): Record<string, string> {
 }
 
 // Crea un player headless vía doHandshake y resuelve los datos completos con getMachine.
-// activationKey puede ser null para devices virtuales (no usan el diálogo de activación UI).
 export async function createPlayer(tenantActivationKey: string, name?: string): Promise<CreatedPlayer> {
+  return _createPlayerRequest({ activationKey: tenantActivationKey }, name);
+}
+
+// Crea un player headless en un tenant específico identificado por customerId.
+// El API resuelve la activation key desde la BD usando el dbKey configurado.
+export async function createPlayerInCustomer(customerId: number, name?: string): Promise<CreatedPlayer> {
+  return _createPlayerRequest({ customerId, dbKey: config.automationApiDbKey }, name);
+}
+
+async function _createPlayerRequest(
+  identity: { activationKey?: string; customerId?: number; dbKey?: string },
+  name?: string,
+): Promise<CreatedPlayer> {
   const maxAttempts = 5;
   let lastError: Error | undefined;
 
@@ -40,7 +52,7 @@ export async function createPlayer(tenantActivationKey: string, name?: string): 
       const res = await fetch(`${config.automationApiUrl}/api/player`, {
         method: 'POST',
         headers: buildHeaders(),
-        body: JSON.stringify({ baseUrl: config.baseUrl, activationKey: tenantActivationKey, ...(name ? { name } : {}) }),
+        body: JSON.stringify({ baseUrl: config.baseUrl, ...identity, ...(name ? { name } : {}) }),
       });
       if (!res.ok) {
         throw new Error(`createPlayer failed: ${res.status} ${await res.text()}`);

@@ -11,7 +11,11 @@ export class PlayerController {
 
   @Post()
   createPlayer(@Body() dto: CreatePlayerDto) {
-    return this.playerService.createPlayer(dto.baseUrl, dto.activationKey, dto.name);
+    return this.playerService.createPlayer(
+      dto.baseUrl,
+      { activationKey: dto.activationKey, customerId: dto.customerId, dbKey: dto.dbKey },
+      dto.name,
+    );
   }
 
   @Post('simulate-downloads')

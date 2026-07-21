@@ -18,7 +18,10 @@ test.describe('Crear SuperTenant y activarlo', () => {
     const customerPage = new CustomerPage(page);
     const generalPage = new GeneralPage(page);
 
-    await loginWithSession(page, config.userName2, config.password);
+    // El parámetro clientName fuerza el contexto a QA Automation tras el login.
+    // Sin esto, el servidor puede restaurar el último tenant activo del usuario
+    // (p.ej. SUPER TENANT si CP40PP corrió antes), impidiendo crear SuperTenants.
+    await loginWithSession(page, config.userName, config.password, config.clientName);
 
     const superCustomerName = 'nuevo SuperTenant ' + dateFormatter.datetime();
 
@@ -28,7 +31,7 @@ test.describe('Crear SuperTenant y activarlo', () => {
       .waitFor({ state: 'attached', timeout: 8000 }).then(() => true).catch(() => false);
     if (!customerLinkExists) {
       throw new Error(
-        '[BUG APP CP44PP] La opción "Clientes" no aparece en el menú de Configuración para el usuario testermation2. ' +
+        '[BUG APP CP44PP] La opción "Clientes" no aparece en el menú de Configuración para el usuario testermation. ' +
         'El usuario no tiene acceso a la sección de gestión de clientes, o la funcionalidad de creación de SuperTenant ' +
         'está deshabilitada en la versión actual de la aplicación.'
       );
@@ -38,7 +41,7 @@ test.describe('Crear SuperTenant y activarlo', () => {
     await customerPage.clickAddButton();
     await customerPage.clickNewSuperCustomerButton();
     await customerPage.typeNameSuperInput(superCustomerName);
-    await customerPage.typeCustomer(config.clientName);
+    await customerPage.typeCustomer(config.clientNameForSuperTenant);
     await customerPage.clickConfirmButton();
     await globalPage.waitSpinner();
 

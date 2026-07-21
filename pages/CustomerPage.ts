@@ -8,14 +8,14 @@ export class CustomerPage extends BasePage {
 
   private elements = {
     addButton:       () => this.findElement({ get: '[icon-start=\'add\']', find: ['#paperFab'], eq: 0 }),
-    newCustomerBtn:      () => this.findElement({ get: '[icon=\'perm-identity\']', find: ['#paperFab'] }),
-    newSuperCustomerBtn: () => this.findElement({ get: "[icon='supervisor-account']", find: ['#paperFab'] }),
+    newCustomerBtn:      () => this.page.locator('paper-fab[title="Nuevo Cliente"], paper-fab[title="New Customer"]').first(),
+    newSuperCustomerBtn: () => this.page.locator('paper-fab[title="Nuevo Super-Cliente"], paper-fab[title="New Super Customer"]').first(),
     nameInput:           () => this.findElement({ get: '.style-input', find: ['input'], eq: 0 }),
-    superNameInput:      () => this.page.locator('#customer #dialogSave paper-input').first().locator('input'),
-    customerComboInput:  () => this.page.locator('#customer #dialogSave vaadin-combo-box input'),
+    superNameInput:      () => this.page.locator('#dialogSaveSuper paper-input').first().locator('input'),
+    customerComboInput:  () => this.page.locator('#dialogSaveSuper >> dex-textarea-tags >> vaadin-combo-box >> input'),
     intermalIdInput:     () => this.findElement({ get: '.style-input', find: ['input'], eq: 1 }),
     ownerMailInput:      () => this.findElement({ get: '.style-input', find: ['input'], eq: 2 }),
-    confirmButton:       () => this.page.locator('#customer >> #dialogSave >> [role=\'button\']').filter({ hasText: /Confirmar|Confirm/i }),
+    confirmButton:       () => this.page.locator('#dialogSave [role=\'button\'], #dialogSaveSuper [role=\'button\']').filter({ hasText: /Confirmar|Confirm/i }).filter({ visible: true }),
     searchInput:     () => this.findElement({ get: '.search-input', find: ['input'] }),
     toggle:          () => this.findElement({ get: 'dex-settings-customer', find: ['#toggleButton'] }),
     toggleState:     () => this.findElement({ get: 'dex-settings-customer', find: ['paper-toggle-button'] }),
@@ -25,8 +25,17 @@ export class CustomerPage extends BasePage {
     await this.elements.addButton().click();
   }
 
-  async clickNewCustomerButton()      { await this.elements.newCustomerBtn().click(); }
-  async clickNewSuperCustomerButton() { await this.elements.newSuperCustomerBtn().click(); }
+  async clickNewCustomerButton() {
+    const btn = this.elements.newCustomerBtn();
+    await btn.waitFor({ state: 'visible', timeout: 5000 });
+    await btn.click({ force: true });
+  }
+
+  async clickNewSuperCustomerButton() {
+    const btn = this.elements.newSuperCustomerBtn();
+    await btn.waitFor({ state: 'visible', timeout: 5000 });
+    await btn.click({ force: true });
+  }
 
   async typeNameSuperInput(name: string) {
     await this.elements.superNameInput().fill(name, { force: true });
@@ -35,8 +44,11 @@ export class CustomerPage extends BasePage {
   async typeCustomer(clientName: string) {
     const input = this.elements.customerComboInput();
     await input.fill(clientName, { force: true });
+    await this.page.waitForTimeout(500);
     await input.press('ArrowDown');
+    await this.page.waitForTimeout(100);
     await input.press('Enter');
+    await this.page.waitForTimeout(200);
   }
 
   async typeNameInput(customerName: string) {
@@ -52,7 +64,9 @@ export class CustomerPage extends BasePage {
   }
 
   async clickConfirmButton() {
-    await this.elements.confirmButton().click({ force: true });
+    const btn = this.elements.confirmButton();
+    await btn.waitFor({ state: 'visible', timeout: 10000 });
+    await btn.dispatchEvent('click');
   }
 
   async typeSearchInput(customerName: string) {

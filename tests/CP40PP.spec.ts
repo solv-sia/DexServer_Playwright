@@ -1,47 +1,77 @@
-// Asignar playlist de supertenant al player y verificar en UI y BD
+// Crear player en supertenant, asignarle PL_CP40PP y verificar en UI
 import { test, expect } from '@playwright/test';
 import config from '../utils/config';
+import dateFormatter from '../utils/dateFormatter';
 import { GlobalPage } from '../pages/GlobalPage';
 import { loginWithSession } from '../utils/loginWithSession';
 import { NetworkPage } from '../pages/NetworkPage';
 import { NetworkDetailPage } from '../pages/NetworkDetailPage';
-// import { connectDB, dbGetPlayerPlaylist } from '../utils/dbHelper';
+import { createPlayerInCustomer, deletePlayer } from '../utils/automationApi';
 
 test.use({ storageState: { cookies: [], origins: [] } });
 
+// CustomerId del supertenant "* SUPER TENANT QA AUTOMATION" en demo5
+const SUPER_TENANT_CUSTOMER_ID = 54;
+
 test.describe('Asignar playlist de supertenant al player (CP40PP)', () => {
+  const cleanupIds: number[] = [];
+
+  test.afterAll(async () => {
+    for (const id of cleanupIds) {
+      await deletePlayer(id).catch(() => {});
+    }
+  });
+
   test('@CP40PP', async ({ page }) => {
     test.setTimeout(300000);
-
 
     const globalPage = new GlobalPage(page);
     const networkPage = new NetworkPage(page);
     const networkDetailPage = new NetworkDetailPage(page);
 
-    await loginWithSession(page, config.userName2, config.password);
+    // Crear player headless en el supertenant (CustomerId 54)
+    const playerName = `Player CP40PP ${dateFormatter.datetime()}`;
+    const player = await createPlayerInCustomer(SUPER_TENANT_CUSTOMER_ID, playerName).catch((err) => {
+      throw new Error(`PRECONDICIÓN FALLIDA CP40PP: No se pudo crear el player en el supertenant. ${err.message}`);
+    });
+    cleanupIds.push(player.machineId);
+
+    await loginWithSession(page, config.userName, config.password);
+
+    // Cambiar al contexto del supertenant para poder ver y asignar su playlist.
+    // El reload es necesario para que la app aplique el nuevo contexto (mismo patrón que CP44PP).
+    await globalPage.switchToNewTenant(config.supertenantName);
+    await globalPage.loginDecision(config.password);
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await globalPage.waitSpinner();
 
     // ── Asignar PL_CP40PP al player ───────────────────────────────────────────
     await globalPage.clickNetwork();
     await globalPage.waitSpinner();
 
-    await networkPage.clearAndSearch(config.playerCP11PP);
+    await networkPage.clearAndSearch(playerName);
     await page.waitForTimeout(1500);
 
     // Verificar que el player aparece en la lista antes de intentar clickear
     const playerCards = await page.locator('#dexNetworkList dex-network-display-card').count().catch(() => 0);
     if (playerCards === 0) {
       throw new Error(
-        `[BUG APP CP40PP] El player "${config.playerCP11PP}" no aparece en la lista de red para testermation2. ` +
-        'El player fue creado y aprobado en CP11PP (clave de activación distinta a la del tenant FODNMR). ' +
-        'Posible causa: el player pertenece a un contexto de tenant diferente al que ve testermation2 al iniciar sesión, ' +
-        'o la visibilidad multi-tenant no está habilitada en esta versión.'
+        `[BUG APP CP40PP] El player "${playerName}" no aparece en la lista de red del supertenant "${config.supertenantName}". ` +
+        'El player fue creado con la activation key del supertenant pero no es visible en su vista de red.'
       );
     }
     await networkPage.clickResultingPlayer();
     await page.waitForTimeout(1000);
 
     // Asignar la playlist del supertenant como default
-    await networkDetailPage.setNewPlaylist(config.PL_CP40PP, config.PL_CP34PP);
+    try {
+      await networkDetailPage.setNewPlaylist(config.PL_CP40PP, config.PL_CP34PP);
+    } catch (err) {
+      throw new Error(
+        `[BUG DATA CP40PP] La playlist "${config.PL_CP40PP}" no existe en el entorno demo5. ` +
+        `Error: ${(err as Error).message}`
+      );
+    }
     if (await networkDetailPage.decisionToSavePlayer()) {
       await globalPage.readInfoPopup(/Player guardado|Player saved/i);
     }
@@ -50,10 +80,9 @@ test.describe('Asignar playlist de supertenant al player (CP40PP)', () => {
     await page.screenshot({ path: 'screenshots/cp40pp_assign.png' });
 
     // ── Verificar que la playlist fue asignada ────────────────────────────────
-    // Recargar y verificar el campo en la UI
     await page.reload({ waitUntil: 'domcontentloaded' });
     await globalPage.waitSpinner();
-    await networkPage.clearAndSearch(config.playerCP11PP);
+    await networkPage.clearAndSearch(playerName);
     await page.waitForTimeout(1500);
     await networkPage.clickResultingPlayer();
     await page.waitForTimeout(1000);
@@ -63,27 +92,15 @@ test.describe('Asignar playlist de supertenant al player (CP40PP)', () => {
     );
     const assignedPL = (await plInput.inputValue()).trim();
 
-    // La playlist asignada debe contener el nombre de PL_CP40PP
-    // (puede aparecer con el prefijo del tenant entre paréntesis)
-    expect(assignedPL.toLowerCase()).toContain(
-      config.PL_CP40PP.replace(/^\([^)]+\)\s*/, '').toLowerCase()
-    );
+    const expectedFragment = config.PL_CP40PP.replace(/^\([^)]+\)\s*/, '').toLowerCase();
+    if (!assignedPL.toLowerCase().includes(expectedFragment)) {
+      throw new Error(
+        `[BUG APP CP40PP] La playlist asignada en UI es "${assignedPL}" pero se esperaba que contenga "${config.PL_CP40PP}".`
+      );
+    }
+
+    expect(assignedPL.toLowerCase()).toContain(expectedFragment);
 
     await page.screenshot({ path: 'screenshots/cp40pp_verify.png' });
-
-    // ── Verificación BD ───────────────────────────────────────────────────────
-    // Descomentar cuando se implemente connectDB():
-    //
-    // const db = await connectDB();
-    // try {
-    //   const dbPlaylist = await dbGetPlayerPlaylist(db, config.playerCP11PP);
-    //   expect(dbPlaylist).not.toBeNull();
-    //   expect((dbPlaylist ?? '').toLowerCase()).toContain(
-    //     config.PL_CP40PP.replace(/^\([^)]+\)\s*/, '').toLowerCase()
-    //   );
-    // } finally {
-    //   await db.close();
-    // }
-    // ─────────────────────────────────────────────────────────────────────────
   });
 });
