@@ -5,6 +5,7 @@ auth/
 screenshots/
 test-results/
 playwright-report/
+env.demo5
 .env.demo5
 automation-api/.env
 .history
