@@ -26,17 +26,19 @@ npx playwright install
 
 **3. Configurar variables de entorno**
 
-El repo incluye `env.demo5` como plantilla con los valores del entorno demo5. Copialo a `.env.demo5` (con punto) antes de correr los tests:
+Copiá el archivo de ejemplo y completá los valores reales:
 
 ```bash
 # Windows
-copy env.demo5 .env.demo5
+copy env.demo5.example .env.demo5
 
 # macOS / Linux
-cp env.demo5 .env.demo5
+cp env.demo5.example .env.demo5
 ```
 
-El archivo `.env.demo5` está en `.gitignore` — los cambios locales que hagas (credenciales, URL, etc.) no se van a commitear.
+Luego editá `.env.demo5` y completá cada variable (URL del servidor, credenciales de BD, etc.).
+
+El archivo `.env.demo5` está en `.gitignore` — los valores reales nunca se commitean.
 
 > Sin este paso los tests fallan con `Cannot navigate to invalid URL` porque `BASE_URL_DEX` queda vacío.
 
