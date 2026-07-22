@@ -8,6 +8,12 @@ Suite de tests E2E con Playwright para DexServer, una plataforma multi-tenant de
 
 ## Setup inicial
 
+> **Si clonaste `dexserver_automation`:** todos los comandos se ejecutan desde la subcarpeta `playwright/`.
+> ```bash
+> cd playwright/
+> ```
+> A partir de ahí, seguí los pasos de abajo normalmente.
+
 Estos pasos solo se ejecutan una vez al clonar el repositorio.
 
 **1. Instalar dependencias**
