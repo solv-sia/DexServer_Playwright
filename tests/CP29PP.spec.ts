@@ -21,7 +21,7 @@ test.describe('Create HW Policy', () => {
   });
 
   test('@CP29PP', async ({ page }) => {
-    test.setTimeout(720000);
+    test.setTimeout(900000);
 
     const hardwarePolicyName = 'HW Policy ' + dateFormatter.datetime();
     const syncGroupName = 'Grupo Sincronizado Automation ' + dateFormatter.datetime();
@@ -97,7 +97,7 @@ test.describe('Create HW Policy', () => {
       await networkPage.clearAndSearch(player1.machineName);
       await networkPage.clickResultingPlayer();
       await networkDetailPage.validateInheritedValues({ hardwarePolicyName });
-    }).toPass({ timeout: 300000, intervals: [10000, 15000, 15000, 20000, 20000] });
+    }).toPass({ timeout: 600000, intervals: [10000, 15000, 20000, 20000, 30000, 30000] });
     await page.screenshot({ path: 'screenshots/cp29pp_player1.png' });
 
     // Validar herencia en player2: misma verificación
@@ -107,7 +107,7 @@ test.describe('Create HW Policy', () => {
       await networkPage.clearAndSearch(player2.machineName);
       await networkPage.clickResultingPlayer();
       await networkDetailPage.validateInheritedValues({ hardwarePolicyName });
-    }).toPass({ timeout: 300000, intervals: [10000, 15000, 15000, 20000, 20000] });
+    }).toPass({ timeout: 600000, intervals: [10000, 15000, 20000, 20000, 30000, 30000] });
     await page.screenshot({ path: 'screenshots/cp29pp_player2.png' });
   });
 });

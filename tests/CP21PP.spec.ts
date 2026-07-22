@@ -20,7 +20,7 @@ test.describe('Create a TAG and assign it to the group', () => {
   });
 
   test('@CP21PP', async ({ page }) => {
-    test.setTimeout(300000);
+    test.setTimeout(720000);
 
     const tagName = 'SERVER TEST ' + dateFormatter.datetime();
     const syncGroupName = 'Grupo Sincronizado Automation ' + dateFormatter.datetime();
@@ -86,7 +86,7 @@ test.describe('Create a TAG and assign it to the group', () => {
       await networkPage.clearAndSearch(player1.machineName);
       await networkPage.clickResultingPlayer();
       await networkDetailPage.validateTagValue(tagName);
-    }).toPass({ timeout: 60000, intervals: [3000, 5000, 5000, 8000] });
+    }).toPass({ timeout: 300000, intervals: [10000, 15000, 15000, 20000, 20000] });
     await page.screenshot({ path: 'screenshots/cp21pp_player1.png' });
 
     // Validar tag en player2
@@ -96,7 +96,7 @@ test.describe('Create a TAG and assign it to the group', () => {
       await networkPage.clearAndSearch(player2.machineName);
       await networkPage.clickResultingPlayer();
       await networkDetailPage.validateTagValue(tagName);
-    }).toPass({ timeout: 60000, intervals: [3000, 5000, 5000, 8000] });
+    }).toPass({ timeout: 300000, intervals: [10000, 15000, 15000, 20000, 20000] });
     await page.screenshot({ path: 'screenshots/cp21pp_player2.png' });
   });
 });

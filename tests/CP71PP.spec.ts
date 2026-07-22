@@ -1,3 +1,4 @@
+
 // Superfilter: búsqueda combinada con dos condiciones simultáneas
 import { test, expect } from '@playwright/test';
 import config from '../utils/config';
